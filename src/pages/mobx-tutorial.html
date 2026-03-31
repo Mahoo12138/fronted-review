@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MobX 深度解析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Sora:wght@300;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e14;
+    --surface: #12161f;
+    --surface2: #1a1f2e;
+    --surface3: #222840;
+    --border: #2a3050;
+    --accent: #7c6af7;
+    --accent2: #e86cfa;
+    --accent3: #3df0c2;
+    --accent4: #f5a623;
+    --text: #d8ddf5;
+    --text-dim: #6b7498;
+    --text-bright: #f0f3ff;
+    --red: #ff5f72;
+    --green: #3df0c2;
+    --blue: #5cb8ff;
+    --yellow: #f5a623;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Sora', sans-serif;
+    --transition-theme: background .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+
+  /* ─── LIGHT THEME ─── */
+  :root.light {
+    --bg: #f4f5f9;
+    --surface: #ffffff;
+    --surface2: #eef0f7;
+    --surface3: #e3e6f0;
+    --border: #d0d5e8;
+    --accent: #6254e8;
+    --accent2: #c83df5;
+    --accent3: #00b894;
+    --accent4: #e67e22;
+    --text: #2d3561;
+    --text-dim: #7b84a8;
+    --text-bright: #111630;
+    --red: #e8394a;
+    --green: #00b894;
+    --blue: #2980d8;
+    --yellow: #e67e22;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+    transition: var(--transition-theme);
+  }
+
+  /* ─── NOISE LAYER ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: .4;
+  }
+
+  /* ─── SIDEBAR NAV ─── */
+  nav {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 0;
+    z-index: 100;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-logo {
+    padding: 0 24px 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .nav-logo .logo-text {
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .nav-logo .logo-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 16px 24px 8px;
+  }
+
+  nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 24px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all .15s;
+    border-left: 3px solid transparent;
+  }
+
+  nav a:hover, nav a.active {
+    color: var(--text-bright);
+    background: var(--surface2);
+    border-left-color: var(--accent);
+  }
+
+  nav a .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background .15s;
+  }
+
+  nav a:hover .dot, nav a.active .dot { background: var(--accent); }
+
+  /* ─── MAIN LAYOUT ─── */
+  main {
+    margin-left: 240px;
+    padding: 0 60px 80px;
+    max-width: 1100px;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    padding: 80px 0 60px;
+    position: relative;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,106,247,.15);
+    border: 1px solid rgba(124,106,247,.35);
+    color: var(--accent);
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 5px 14px;
+    border-radius: 4px;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-bright);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-desc {
+    font-size: 17px;
+    color: var(--text-dim);
+    max-width: 620px;
+    line-height: 1.8;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 500px; height: 300px;
+    background: radial-gradient(ellipse, rgba(124,106,247,.12) 0%, transparent 70%);
+    top: 40px; right: -60px;
+    pointer-events: none;
+  }
+
+  /* ─── SECTIONS ─── */
+  section {
+    margin-bottom: 80px;
+    scroll-margin-top: 40px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-number {
+    width: 36px; height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin: 28px 0 12px;
+  }
+
+  h3::before {
+    content: '// ';
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+
+  p { color: var(--text); margin-bottom: 14px; }
+
+  /* ─── DIAGRAM: CORE FLOW ─── */
+  .diagram-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin: 24px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .diagram-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  }
+
+  /* Flow Diagram */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    row-gap: 16px;
+  }
+
+  .flow-node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 22px;
+    text-align: center;
+    min-width: 130px;
+    position: relative;
+    transition: all .2s;
+    cursor: default;
+  }
+
+  .flow-node:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(124,106,247,.2);
+  }
+
+  .flow-node .fn-icon { font-size: 24px; margin-bottom: 6px; }
+
+  .flow-node .fn-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+
+  .flow-node .fn-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-top: 3px;
+  }
+
+  .flow-node.obs { border-color: rgba(61,240,194,.4); }
+  .flow-node.obs .fn-label { color: var(--accent3); }
+  .flow-node.comp { border-color: rgba(124,106,247,.4); }
+  .flow-node.comp .fn-label { color: var(--accent); }
+  .flow-node.react { border-color: rgba(232,108,250,.4); }
+  .flow-node.react .fn-label { color: var(--accent2); }
+  .flow-node.act { border-color: rgba(245,166,35,.4); }
+  .flow-node.act .fn-label { color: var(--yellow); }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    font-size: 20px;
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* ─── CODE BLOCKS ─── */
+  .code-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-header .dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-header .dots span {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+  }
+
+  .code-header .dots span:nth-child(1) { background: #ff5f56; }
+  .code-header .dots span:nth-child(2) { background: #ffbd2e; }
+  .code-header .dots span:nth-child(3) { background: #27c93f; }
+
+  .code-header .filename {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .code-header .lang-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    background: rgba(124,106,247,.2);
+    color: var(--accent);
+    border-radius: 4px;
+  }
+
+  pre {
+    padding: 20px 22px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.75;
+    overflow-x: auto;
+    color: var(--text);
+  }
+
+  /* Syntax highlight */
+  .kw { color: var(--accent2); font-weight: 600; }
+  .fn { color: var(--blue); }
+  .str { color: var(--green); }
+  .num { color: var(--yellow); }
+  .cm { color: #4a5270; font-style: italic; }
+  .cls { color: var(--accent3); }
+  .var { color: var(--text); }
+  .dec { color: var(--accent); }
+  .prop { color: #aad4ff; }
+
+  /* ─── INFO CARDS ─── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    transition: all .2s;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(124,106,247,.15);
+  }
+
+  .card-icon { font-size: 28px; margin-bottom: 10px; }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+
+  .card-desc {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ─── HIGHLIGHT BLOCKS ─── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .callout.info { background: rgba(92,184,255,.08); border-left: 3px solid var(--blue); color: #a8d4f5; }
+  .callout.warn { background: rgba(245,166,35,.08); border-left: 3px solid var(--yellow); color: #f0d090; }
+  .callout.tip  { background: rgba(61,240,194,.08); border-left: 3px solid var(--accent3); color: #8ff5dc; }
+
+  .callout-icon { font-size: 18px; flex-shrink: 0; padding-top: 1px; }
+
+  /* ─── IMPL TABLES ─── */
+  .impl-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 13px;
+  }
+
+  .impl-table th {
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .impl-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(42,48,80,.6);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .impl-table tr:last-child td { border-bottom: none; }
+  .impl-table tr:hover td { background: rgba(255,255,255,.02); }
+
+  .impl-table td:first-child {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .impl-table td:nth-child(2) {
+    color: var(--text-dim);
+    font-size: 12px;
+    min-width: 100px;
+  }
+
+  /* ─── ARCHITECTURE DIAGRAM ─── */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+
+  .arch-cell {
+    background: var(--surface);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .arch-cell .ac-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-dim);
+  }
+
+  .arch-cell .ac-items {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .arch-item {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .arch-item::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .arch-cell.obs-col .arch-item { color: var(--accent3); }
+  .arch-cell.obs-col .arch-item::before { background: var(--accent3); }
+  .arch-cell.comp-col .arch-item { color: var(--accent); }
+  .arch-cell.comp-col .arch-item::before { background: var(--accent); }
+  .arch-cell.side-col .arch-item { color: var(--accent2); }
+  .arch-cell.side-col .arch-item::before { background: var(--accent2); }
+
+  /* ─── REACTION GRAPH ─── */
+  .graph-container {
+    display: flex;
+    gap: 24px;
+    margin: 24px 0;
+    align-items: flex-start;
+  }
+
+  .graph-box {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .graph-box h4 {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+
+  .dep-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .dep-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .dep-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+
+  .dep-pill.obs { color: var(--accent3); border-color: rgba(61,240,194,.4); background: rgba(61,240,194,.08); }
+  .dep-pill.comp { color: var(--accent); border-color: rgba(124,106,247,.4); background: rgba(124,106,247,.08); }
+  .dep-pill.react { color: var(--accent2); border-color: rgba(232,108,250,.4); background: rgba(232,108,250,.08); }
+
+  /* ─── TABS ─── */
+  .tabs {
+    margin: 20px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .tab-btn {
+    padding: 10px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s;
+  }
+
+  .tab-btn:hover { color: var(--text-bright); }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .tab-panel pre { border-radius: 0; }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 60px 0;
+  }
+
+  /* ─── MOBX-REACT ─── */
+  .mobx-react-banner {
+    background: linear-gradient(135deg, rgba(232,108,250,.12), rgba(124,106,247,.12));
+    border: 1px solid rgba(232,108,250,.25);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mobx-react-banner::after {
+    content: 'mobx-react';
+    position: absolute;
+    right: 24px; top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 56px;
+    font-weight: 800;
+    color: rgba(232,108,250,.07);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .mobx-react-banner h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .mobx-react-banner p {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  /* ─── LIFECYCLE DIAGRAM ─── */
+  .lifecycle {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 24px 0;
+    position: relative;
+  }
+
+  .lifecycle::before {
+    content: '';
+    position: absolute;
+    left: 23px; top: 24px; bottom: 24px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+  }
+
+  .lc-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 12px 0;
+  }
+
+  .lc-num {
+    width: 48px; height: 48px;
+    background: var(--surface2);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .lc-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    flex: 1;
+    margin-top: 4px;
+  }
+
+  .lc-content .lc-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+
+  .lc-content .lc-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  .lc-content .lc-code {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent3);
+    background: var(--surface2);
+    padding: 6px 10px;
+    border-radius: 5px;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    margin-left: 240px;
+    padding: 32px 60px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .footer-tags {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tag {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .tag.v1 { background: rgba(61,240,194,.1); color: var(--accent3); }
+  .tag.v2 { background: rgba(124,106,247,.1); color: var(--accent); }
+  .tag.v3 { background: rgba(232,108,250,.1); color: var(--accent2); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    nav { width: 200px; }
+    main { margin-left: 200px; padding: 0 24px 60px; }
+    footer { margin-left: 200px; padding: 24px; }
+    .hero h1 { font-size: 36px; }
+    .arch { grid-template-columns: 1fr; }
+  }
+
+  /* ─── THEME TOGGLE ─── */
+  .theme-toggle {
+    margin: 16px 24px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition-theme), transform .15s;
+    width: calc(100% - 48px);
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .theme-toggle .tt-track {
+    width: 36px; height: 20px;
+    border-radius: 10px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    position: relative;
+    flex-shrink: 0;
+    transition: background .25s ease, border-color .25s ease;
+  }
+
+  .theme-toggle .tt-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), background .25s ease;
+  }
+
+  :root.light .theme-toggle .tt-track {
+    background: rgba(98,84,232,.15);
+    border-color: rgba(98,84,232,.35);
+  }
+
+  :root.light .theme-toggle .tt-thumb {
+    transform: translateX(16px);
+    background: var(--accent);
+  }
+
+  .theme-toggle .tt-label {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+    flex: 1;
+    transition: color .25s ease;
+  }
+
+  .theme-toggle .tt-icon {
+    font-size: 14px;
+    transition: transform .4s ease;
+  }
+
+  :root.light .theme-toggle .tt-icon { transform: rotate(180deg); }
+
+  /* Light mode: noise less visible */
+  :root.light body::before { opacity: .15; }
+
+  /* Light mode: code block adjustments */
+  :root.light pre { color: var(--text); }
+  :root.light .cm { color: #9aa3c2; }
+  :root.light .code-wrap { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  :root.light .diagram-box { box-shadow: 0 2px 16px rgba(0,0,0,.05); }
+  :root.light .card:hover { box-shadow: 0 8px 24px rgba(98,84,232,.12); }
+  :root.light .flow-node:hover { box-shadow: 0 8px 24px rgba(98,84,232,.15); }
+  :root.light .callout.info { background: rgba(41,128,216,.08); color: #1a5ea8; }
+  :root.light .callout.warn { background: rgba(230,126,34,.08); color: #a85a0a; }
+  :root.light .callout.tip  { background: rgba(0,184,148,.08);  color: #007a60; }
+  :root.light .hero-glow { background: radial-gradient(ellipse, rgba(98,84,232,.08) 0%, transparent 70%); }
+  :root.light .mobx-react-banner { background: linear-gradient(135deg, rgba(200,61,245,.07), rgba(98,84,232,.07)); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="logo-text">MobX</div>
+    <div class="logo-sub">深度原理解析</div>
+  </div>
+
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+    <div class="tt-track"><div class="tt-thumb"></div></div>
+    <span class="tt-label" id="themeLabel">深色模式</span>
+    <span class="tt-icon">🌙</span>
+  </button>
+
+  <div class="nav-section-label">MobX Core</div>
+  <a href="#s-intro"><span class="dot"></span>概述与设计哲学</a>
+  <a href="#s-observable"><span class="dot"></span>Observable 响应式</a>
+  <a href="#s-computed"><span class="dot"></span>Computed 派生值</a>
+  <a href="#s-action"><span class="dot"></span>Action 动作</a>
+  <a href="#s-reaction"><span class="dot"></span>Reaction 副作用</a>
+  <a href="#s-internals"><span class="dot"></span>内部实现原理</a>
+  <a href="#s-api"><span class="dot"></span>全量 API 速查</a>
+
+  <div class="nav-section-label">mobx-react</div>
+  <a href="#s-mr-intro"><span class="dot"></span>集成原理</a>
+  <a href="#s-mr-observer"><span class="dot"></span>observer HOC</a>
+  <a href="#s-mr-hooks"><span class="dot"></span>Hooks API</a>
+  <a href="#s-mr-impl"><span class="dot"></span>实现细节</a>
+  <a href="#s-mr-api"><span class="dot"></span>完整 API 参考</a>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-badge">⚡ 响应式状态管理</div>
+    <h1>MobX 原理<br><span>深度解析</span></h1>
+    <p class="hero-desc">
+      从零理解 MobX 的响应式追踪机制、派生计算、副作用模型，
+      以及 mobx-react 如何将响应式系统与 React 渲染树深度融合。
+    </p>
+  </div>
+
+  <!-- ═══════════════════════════════ SECTION 1 ═══════════════════════════════ -->
+  <section id="s-intro">
+    <div class="section-header">
+      <div class="section-number">01</div>
+      <h2>概述与设计哲学</h2>
+    </div>
+
+    <p>MobX 的核心思想来自 <strong>TFRP（透明函数式响应式编程）</strong>——你只需描述数据之间的关系，框架自动追踪依赖并最小化更新。</p>
+
+    <div class="diagram-box">
+      <div style="text-align:center;margin-bottom:24px;font-size:13px;color:var(--text-dim);font-family:var(--mono);">MobX 核心数据流</div>
+      <div class="flow">
+        <div class="flow-node act">
+          <div class="fn-icon">⚡</div>
+          <div class="fn-label">Action</div>
+          <div class="fn-sub">触发变更</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node obs">
+          <div class="fn-icon">📦</div>
+          <div class="fn-label">Observable</div>
+          <div class="fn-sub">响应式状态</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node comp">
+          <div class="fn-icon">🧮</div>
+          <div class="fn-label">Computed</div>
+          <div class="fn-sub">派生值 (缓存)</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node react">
+          <div class="fn-icon">💫</div>
+          <div class="fn-label">Reaction</div>
+          <div class="fn-sub">副作用/渲染</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--text-dim);">
+        单向数据流 · 自动依赖追踪 · 最小化重渲染
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <div class="card-title">透明追踪</div>
+        <p class="card-desc">运行时自动收集依赖，无需手动声明订阅，无 Selector 模板代码。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">最小更新</div>
+        <p class="card-desc">依赖图精准定位变更影响范围，只重新计算/渲染受影响部分。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧩</div>
+        <div class="card-title">Mutable State</div>
+        <p class="card-desc">直接修改状态，无需不可变更新，心智模型更接近 OOP。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📐</div>
+        <div class="card-title">可组合</div>
+        <p class="card-desc">Store、Service、Domain Model 自由组合，无中心化约束。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 2 ═══════════════════════════════ -->
+  <section id="s-observable">
+    <div class="section-header">
+      <div class="section-number">02</div>
+      <h2>Observable — 响应式状态</h2>
+    </div>
+
+    <p><code style="color:var(--accent);font-family:var(--mono)">observable</code> 将普通值/对象/数组包装为可被追踪的响应式结构。当这些值被 Reaction 或 Computed 读取时，MobX 自动建立订阅关系。</p>
+
+    <h3>基础用法</h3>
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'t-obs-1')">makeObservable</button>
+        <button class="tab-btn" onclick="switchTab(this,'t-obs-2')">makeAutoObservable</button>
+        <button class="tab-btn" onclick="switchTab(this,'t-obs-3')">observable()</button>
+      </div>
+      <div class="tab-panel active" id="t-obs-1"><pre><span class="kw">import</span> { <span class="fn">makeObservable</span>, <span class="fn">observable</span>, <span class="fn">action</span>, <span class="fn">computed</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="kw">class</span> <span class="cls">TodoStore</span> {
+  <span class="prop">todos</span> = [];
+  <span class="prop">filter</span> = <span class="str">'all'</span>;
+
+  <span class="fn">constructor</span>() {
+    <span class="fn">makeObservable</span>(<span class="kw">this</span>, {
+      todos:          <span class="fn">observable</span>,    <span class="cm">// 追踪数组的增删改</span>
+      filter:         <span class="fn">observable</span>,    <span class="cm">// 追踪字符串变化</span>
+      filteredTodos:  <span class="fn">computed</span>,      <span class="cm">// 派生，自动缓存</span>
+      addTodo:        <span class="fn">action</span>,        <span class="cm">// 批量事务更新</span>
+    });
+  }
+
+  <span class="kw">get</span> <span class="fn">filteredTodos</span>() {
+    <span class="kw">return this</span>.todos.filter(t => t.status === <span class="kw">this</span>.filter);
+  }
+
+  <span class="fn">addTodo</span>(text) {
+    <span class="kw">this</span>.todos.push({ text, status: <span class="str">'active'</span> });
+  }
+}</pre></div>
+      <div class="tab-panel" id="t-obs-2"><pre><span class="kw">import</span> { <span class="fn">makeAutoObservable</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="kw">class</span> <span class="cls">CounterStore</span> {
+  <span class="prop">count</span> = <span class="num">0</span>;
+
+  <span class="fn">constructor</span>() {
+    <span class="cm">// 自动推断：普通属性 → observable</span>
+    <span class="cm">//          getter    → computed</span>
+    <span class="cm">//          方法      → action</span>
+    <span class="fn">makeAutoObservable</span>(<span class="kw">this</span>);
+  }
+
+  <span class="kw">get</span> <span class="fn">doubled</span>() {
+    <span class="kw">return this</span>.count * <span class="num">2</span>;  <span class="cm">// 自动成为 computed</span>
+  }
+
+  <span class="fn">increment</span>() {
+    <span class="kw">this</span>.count++;           <span class="cm">// 自动成为 action</span>
+  }
+}</pre></div>
+      <div class="tab-panel" id="t-obs-3"><pre><span class="kw">import</span> { <span class="fn">observable</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="cm">// 对象：深度 observable</span>
+<span class="kw">const</span> <span class="var">state</span> = <span class="fn">observable</span>({
+  name: <span class="str">'Alice'</span>,
+  profile: { age: <span class="num">28</span> }   <span class="cm">// 嵌套对象也被代理</span>
+});
+
+<span class="cm">// 数组：observable.array</span>
+<span class="kw">const</span> <span class="var">list</span> = <span class="fn">observable</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]);
+
+<span class="cm">// Map / Set</span>
+<span class="kw">const</span> <span class="var">map</span>  = <span class="fn">observable</span>(<span class="kw">new</span> <span class="cls">Map</span>());
+<span class="kw">const</span> <span class="var">set</span>  = <span class="fn">observable</span>(<span class="kw">new</span> <span class="cls">Set</span>());
+
+<span class="cm">// 原始值 (boxed)</span>
+<span class="kw">const</span> <span class="var">box</span>  = <span class="fn">observable</span>.box(<span class="num">42</span>);
+box.<span class="fn">get</span>();       <span class="cm">// 读取：42</span>
+box.<span class="fn">set</span>(<span class="num">100</span>);    <span class="cm">// 写入，触发追踪</span></pre></div>
+    </div>
+
+    <h3>内部实现：Proxy + ObservableAdministration</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">observable-impl.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="cm">// 简化版核心实现</span>
+<span class="kw">class</span> <span class="cls">ObservableValue</span> {
+  <span class="fn">constructor</span>(value) {
+    <span class="kw">this</span>._value = value;
+    <span class="kw">this</span>._observers = <span class="kw">new</span> <span class="cls">Set</span>();  <span class="cm">// 订阅该值的 Derivation 集合</span>
+  }
+
+  <span class="fn">get</span>() {
+    <span class="cm">// 关键！将当前 globalTrackingDerivation 加入订阅者</span>
+    <span class="kw">if</span> (<span class="var">globalTrackingDerivation</span>) {
+      <span class="kw">this</span>._observers.<span class="fn">add</span>(<span class="var">globalTrackingDerivation</span>);
+      <span class="var">globalTrackingDerivation</span>.newObserveds.<span class="fn">add</span>(<span class="kw">this</span>);
+    }
+    <span class="kw">return this</span>._value;
+  }
+
+  <span class="fn">set</span>(newValue) {
+    <span class="kw">if</span> (newValue === <span class="kw">this</span>._value) <span class="kw">return</span>;
+    <span class="kw">this</span>._value = newValue;
+    <span class="cm">// 通知所有 observers 重新计算</span>
+    <span class="kw">this</span>._observers.<span class="fn">forEach</span>(obs => obs.<span class="fn">invalidate</span>());
+  }
+}
+
+<span class="cm">// globalTrackingDerivation 是 MobX 全局追踪上下文</span>
+<span class="cm">// 在 autorun/computed 运行函数时设置，运行结束后清除</span>
+<span class="kw">let</span> <span class="var">globalTrackingDerivation</span> = <span class="kw">null</span>;
+
+<span class="kw">function</span> <span class="fn">trackDerivedFunction</span>(derivation, fn) {
+  <span class="kw">const</span> <span class="var">prev</span> = <span class="var">globalTrackingDerivation</span>;
+  <span class="var">globalTrackingDerivation</span> = derivation;
+  derivation.newObserveds = <span class="kw">new</span> <span class="cls">Set</span>();
+  <span class="kw">try</span> {
+    <span class="kw">return</span> <span class="fn">fn</span>();   <span class="cm">// fn 执行期间所有 get() 都会注册依赖</span>
+  } <span class="kw">finally</span> {
+    <span class="var">globalTrackingDerivation</span> = prev;
+    <span class="cm">// 对比新旧依赖，清理失效的订阅</span>
+    <span class="fn">diffAndUpdateDependencies</span>(derivation);
+  }
+}</pre>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">💡</div>
+      <div>MobX 在现代版本（v6+）中使用 <strong>ES6 Proxy</strong> 拦截属性访问，旧版（v4/v5）通过 <strong>Object.defineProperty</strong> getter/setter 实现，Proxy 的优势在于可追踪新增属性和数组索引访问。</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 3 ═══════════════════════════════ -->
+  <section id="s-computed">
+    <div class="section-header">
+      <div class="section-number">03</div>
+      <h2>Computed — 派生值与缓存</h2>
+    </div>
+
+    <p>Computed 是 MobX 的精华之一：它是一个 <strong>惰性求值 + 结果缓存</strong> 的派生值，只有当依赖变化且有订阅者时才重新计算。</p>
+
+    <div class="diagram-box">
+      <div style="text-align:center;font-size:13px;color:var(--text-dim);font-family:var(--mono);margin-bottom:20px;">Computed 生命周期</div>
+      <div class="lifecycle">
+        <div class="lc-step">
+          <div class="lc-num">1</div>
+          <div class="lc-content">
+            <div class="lc-title">创建 — POSSIBLY_STALE</div>
+            <p class="lc-desc">computed 首次创建时标记为 "可能过期"，还未执行计算函数。</p>
+            <div class="lc-code">state: POSSIBLY_STALE | NOT_TRACKING</div>
+          </div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">2</div>
+          <div class="lc-content">
+            <div class="lc-title">首次读取 — 求值并追踪依赖</div>
+            <p class="lc-desc">调用 .get() 触发 trackDerivedFunction，收集依赖，缓存结果。状态置为 UP_TO_DATE。</p>
+            <div class="lc-code">computed.get() → trackDerivedFunction(fn) → cache result</div>
+          </div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">3</div>
+          <div class="lc-content">
+            <div class="lc-title">依赖变更 — 置为 STALE</div>
+            <p class="lc-desc">上游 observable 改变，向下广播 STALE 信号给所有依赖该 computed 的 Reaction。</p>
+            <div class="lc-code">observable.set() → propagate STALE to observers</div>
+          </div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">4</div>
+          <div class="lc-content">
+            <div class="lc-title">再次读取 — 检查是否真正过期</div>
+            <p class="lc-desc">MobX 先检查直接依赖是否真的变了（节省计算），若无变化则复用缓存（钻石依赖优化）。</p>
+            <div class="lc-code">if (dependenciesUnchanged) return cachedValue;</div>
+          </div>
+        </div>
+        <div class="lc-step">
+          <div class="lc-num">5</div>
+          <div class="lc-content">
+            <div class="lc-title">无订阅者 — 挂起追踪</div>
+            <p class="lc-desc">computed 没有 Reaction 消费时，自动停止对上游的订阅，避免内存泄漏。</p>
+            <div class="lc-code">if (observers.empty) state = NOT_TRACKING;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Computed 实现骨架</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">computed-impl.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">class</span> <span class="cls">ComputedValue</span> {
+  <span class="fn">constructor</span>(derivation) {
+    <span class="kw">this</span>._derivation = derivation;   <span class="cm">// 计算函数</span>
+    <span class="kw">this</span>._value      = <span class="kw">undefined</span>;
+    <span class="kw">this</span>._state      = <span class="str">'NOT_TRACKING'</span>;
+    <span class="kw">this</span>._observers  = <span class="kw">new</span> <span class="cls">Set</span>();
+    <span class="kw">this</span>._observeds  = <span class="kw">new</span> <span class="cls">Set</span>();    <span class="cm">// 订阅的上游 observable</span>
+  }
+
+  <span class="fn">get</span>() {
+    <span class="cm">// 将自身注册到上层的追踪上下文</span>
+    <span class="kw">if</span> (<span class="var">globalTrackingDerivation</span>) {
+      <span class="kw">this</span>._observers.<span class="fn">add</span>(<span class="var">globalTrackingDerivation</span>);
+    }
+    <span class="cm">// 按需重新计算</span>
+    <span class="kw">if</span> (<span class="kw">this</span>._state !== <span class="str">'UP_TO_DATE'</span>) {
+      <span class="kw">this</span>._computeValue();
+    }
+    <span class="kw">return this</span>._value;
+  }
+
+  <span class="fn">_computeValue</span>() {
+    <span class="kw">const</span> <span class="var">newValue</span> = <span class="fn">trackDerivedFunction</span>(<span class="kw">this</span>, <span class="kw">this</span>._derivation);
+    <span class="kw">const</span> <span class="var">changed</span>  = !<span class="fn">isEqual</span>(<span class="var">newValue</span>, <span class="kw">this</span>._value);  <span class="cm">// 支持自定义 equals</span>
+    <span class="kw">this</span>._value = <span class="var">newValue</span>;
+    <span class="kw">this</span>._state = <span class="str">'UP_TO_DATE'</span>;
+    <span class="kw">if</span> (<span class="var">changed</span>) <span class="kw">this</span>.<span class="fn">_notifyObservers</span>();  <span class="cm">// 值真正变了才向下传播</span>
+  }
+
+  <span class="fn">invalidate</span>() {
+    <span class="kw">if</span> (<span class="kw">this</span>._state === <span class="str">'UP_TO_DATE'</span>) {
+      <span class="kw">this</span>._state = <span class="str">'STALE'</span>;
+      <span class="kw">this</span>._observers.<span class="fn">forEach</span>(obs => obs.<span class="fn">invalidate</span>());  <span class="cm">// 向下广播</span>
+    }
+  }
+}</pre>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">🚀</div>
+      <div><strong>钻石依赖优化</strong>：当多个 computed 依赖同一 observable 时（形成钻石形依赖图），MobX 通过两阶段传播（标记 STALE → 延迟求值）确保每个 computed 只计算一次，不会出现重复计算或中间状态闪烁。</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 4 ═══════════════════════════════ -->
+  <section id="s-action">
+    <div class="section-header">
+      <div class="section-number">04</div>
+      <h2>Action — 事务性变更</h2>
+    </div>
+
+    <p>Action 将多个 observable 变更包裹在一个 <strong>事务（transaction）</strong> 中，确保中间状态不触发 Reaction，批量通知依赖。</p>
+
+    <h3>Action API</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">action-demo.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="fn">action</span>, <span class="fn">runInAction</span>, <span class="fn">flow</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="cm">// ① 装饰器 / 包裹函数</span>
+<span class="kw">const</span> <span class="var">setUser</span> = <span class="fn">action</span>(<span class="str">'setUser'</span>, (store, user) => {
+  store.name  = user.name;   <span class="cm">// 事务内：不触发 Reaction</span>
+  store.age   = user.age;
+  store.email = user.email;
+  <span class="cm">// 事务结束：批量通知一次</span>
+});
+
+<span class="cm">// ② runInAction：临时创建匿名 action（常用于 async 回调）</span>
+<span class="kw">async function</span> <span class="fn">fetchUser</span>(id) {
+  <span class="kw">const</span> <span class="var">data</span> = <span class="kw">await</span> <span class="fn">api</span>.get(id);
+  <span class="fn">runInAction</span>(() => {
+    store.user   = data;
+    store.loaded = <span class="kw">true</span>;
+  });
+}
+
+<span class="cm">// ③ flow：generator 版本，自动处理异步的 runInAction</span>
+<span class="kw">const</span> <span class="var">loadData</span> = <span class="fn">flow</span>(<span class="kw">function</span>*() {
+  store.loading = <span class="kw">true</span>;
+  <span class="kw">const</span> <span class="var">data</span> = <span class="kw">yield</span> <span class="fn">fetch</span>(<span class="str">'/api/data'</span>);
+  store.data    = <span class="kw">yield</span> data.<span class="fn">json</span>();   <span class="cm">// yield 自动 runInAction</span>
+  store.loading = <span class="kw">false</span>;
+});</pre>
+    </div>
+
+    <h3>Transaction 实现原理</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">transaction-impl.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">let</span> <span class="var">batchDepth</span> = <span class="num">0</span>;
+<span class="kw">const</span> <span class="var">pendingReactions</span> = [];
+
+<span class="kw">function</span> <span class="fn">startBatch</span>() {
+  <span class="var">batchDepth</span>++;
+}
+
+<span class="kw">function</span> <span class="fn">endBatch</span>() {
+  <span class="kw">if</span> (--<span class="var">batchDepth</span> === <span class="num">0</span>) {
+    <span class="cm">// 批次结束，统一执行所有 pending reactions</span>
+    <span class="kw">while</span> (<span class="var">pendingReactions</span>.length) {
+      <span class="var">pendingReactions</span>.<span class="fn">shift</span>().<span class="fn">runReaction</span>();
+    }
+  }
+}
+
+<span class="kw">function</span> <span class="fn">action</span>(fn) {
+  <span class="kw">return function</span>(...args) {
+    <span class="fn">startBatch</span>();
+    <span class="kw">try</span> {
+      <span class="kw">return</span> <span class="fn">fn</span>(...args);
+    } <span class="kw">finally</span> {
+      <span class="fn">endBatch</span>();    <span class="cm">// 即使抛出异常也确保 batch 结束</span>
+    }
+  };
+}</pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div>MobX 6 起默认开启 <strong>strict mode</strong>（通过 <code style="font-family:var(--mono);color:var(--yellow)">configure({enforceActions: 'always'})</code>），在 action 外修改 observable 会抛出异常，强制规范变更路径。</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 5 ═══════════════════════════════ -->
+  <section id="s-reaction">
+    <div class="section-header">
+      <div class="section-number">05</div>
+      <h2>Reaction — 副作用</h2>
+    </div>
+
+    <p>Reaction 是 MobX 响应式图的 <strong>叶节点</strong>——它不产生值，只执行副作用（UI 更新、日志、网络请求等）。</p>
+
+    <div class="graph-container">
+      <div class="graph-box">
+        <h4>autorun</h4>
+        <div class="dep-list">
+          <div class="dep-item">
+            <span class="dep-pill obs">observable</span>
+            <span style="font-size:12px;color:var(--text-dim)">→ 立即执行并追踪全部依赖</span>
+          </div>
+          <div class="dep-item" style="margin-left:20px">
+            <span style="font-size:12px;color:var(--text-dim)">任意依赖变化时重新执行</span>
+          </div>
+        </div>
+      </div>
+      <div class="graph-box">
+        <h4>reaction</h4>
+        <div class="dep-list">
+          <div class="dep-item">
+            <span class="dep-pill obs">data fn</span>
+            <span style="font-size:12px;color:var(--text-dim)">→ 追踪数据源（不执行副作用）</span>
+          </div>
+          <div class="dep-item">
+            <span class="dep-pill react">effect fn</span>
+            <span style="font-size:12px;color:var(--text-dim)">→ 数据变化时执行</span>
+          </div>
+        </div>
+      </div>
+      <div class="graph-box">
+        <h4>when</h4>
+        <div class="dep-list">
+          <div class="dep-item">
+            <span class="dep-pill obs">predicate</span>
+            <span style="font-size:12px;color:var(--text-dim)">→ 追踪条件</span>
+          </div>
+          <div class="dep-item">
+            <span class="dep-pill react">effect</span>
+            <span style="font-size:12px;color:var(--text-dim)">→ 条件首次为 true 时执行一次</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">reactions-demo.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="fn">autorun</span>, <span class="fn">reaction</span>, <span class="fn">when</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="cm">// ① autorun：立即执行，自动追踪所有依赖</span>
+<span class="kw">const</span> <span class="var">dispose1</span> = <span class="fn">autorun</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">`Count: </span>${store.count}<span class="str">`</span>);   <span class="cm">// 读取即订阅</span>
+});
+<span class="var">dispose1</span>();  <span class="cm">// 调用返回值来取消监听</span>
+
+<span class="cm">// ② reaction：分离"数据追踪"和"副作用"</span>
+<span class="kw">const</span> <span class="var">dispose2</span> = <span class="fn">reaction</span>(
+  () => store.count,              <span class="cm">// data fn：返回要追踪的值</span>
+  (newVal, oldVal) => {           <span class="cm">// effect fn：值变化时执行</span>
+    console.<span class="fn">log</span>(<span class="var">newVal</span>, <span class="var">oldVal</span>);
+  },
+  { fireImmediately: <span class="kw">false</span> }   <span class="cm">// 默认首次不执行</span>
+);
+
+<span class="cm">// ③ when：条件满足时一次性触发</span>
+<span class="fn">when</span>(
+  () => store.isLoaded,
+  () => console.<span class="fn">log</span>(<span class="str">'数据加载完毕！'</span>)
+);
+
+<span class="cm">// Promise 形式</span>
+<span class="kw">await</span> <span class="fn">when</span>(() => store.isLoaded);
+console.<span class="fn">log</span>(<span class="str">'继续执行...'</span>);</pre>
+    </div>
+
+    <h3>Reaction 执行流程</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">reaction-impl.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">class</span> <span class="cls">Reaction</span> {
+  <span class="fn">constructor</span>(name, onInvalidate) {
+    <span class="kw">this</span>.name          = name;
+    <span class="kw">this</span>.onInvalidate  = onInvalidate;  <span class="cm">// 依赖失效时的回调</span>
+    <span class="kw">this</span>._observeds    = <span class="kw">new</span> <span class="cls">Set</span>();
+    <span class="kw">this</span>._isScheduled  = <span class="kw">false</span>;
+  }
+
+  <span class="fn">track</span>(fn) {
+    <span class="cm">// 以自身作为追踪上下文执行 fn</span>
+    <span class="kw">return</span> <span class="fn">trackDerivedFunction</span>(<span class="kw">this</span>, fn);
+  }
+
+  <span class="fn">invalidate</span>() {
+    <span class="cm">// 由上游 observable/computed 调用</span>
+    <span class="kw">if</span> (!<span class="kw">this</span>._isScheduled) {
+      <span class="kw">this</span>._isScheduled = <span class="kw">true</span>;
+      <span class="fn">scheduleReaction</span>(<span class="kw">this</span>);   <span class="cm">// 推入 pendingReactions 队列</span>
+    }
+  }
+
+  <span class="fn">runReaction</span>() {
+    <span class="kw">this</span>._isScheduled = <span class="kw">false</span>;
+    <span class="kw">this</span>.<span class="fn">onInvalidate</span>();   <span class="cm">// 执行用户副作用</span>
+  }
+}
+
+<span class="cm">// autorun 实现</span>
+<span class="kw">function</span> <span class="fn">autorun</span>(view) {
+  <span class="kw">const</span> <span class="var">reaction</span> = <span class="kw">new</span> <span class="cls">Reaction</span>(<span class="str">'autorun'</span>, () => {
+    <span class="var">reaction</span>.<span class="fn">track</span>(view);    <span class="cm">// 每次执行都重新追踪依赖</span>
+  });
+  <span class="var">reaction</span>.<span class="fn">track</span>(view);     <span class="cm">// 首次立即执行</span>
+  <span class="kw">return</span> () => <span class="var">reaction</span>.<span class="fn">dispose</span>();
+}</pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 6 ═══════════════════════════════ -->
+  <section id="s-internals">
+    <div class="section-header">
+      <div class="section-number">06</div>
+      <h2>内部实现：依赖图与调度</h2>
+    </div>
+
+    <p>MobX 在内存中维护一张 <strong>有向无环图（DAG）</strong>，节点是 ObservableValue / ComputedValue / Reaction，边是依赖关系。</p>
+
+    <div class="arch">
+      <div class="arch-cell obs-col">
+        <div class="ac-title">📦 Observable Layer</div>
+        <div class="ac-items">
+          <div class="arch-item">ObservableValue</div>
+          <div class="arch-item">ObservableArray</div>
+          <div class="arch-item">ObservableMap</div>
+          <div class="arch-item">ObservableSet</div>
+          <div class="arch-item">ObservableObject</div>
+        </div>
+      </div>
+      <div class="arch-cell comp-col">
+        <div class="ac-title">🧮 Derivation Layer</div>
+        <div class="ac-items">
+          <div class="arch-item">ComputedValue</div>
+          <div class="arch-item">_observers: Set</div>
+          <div class="arch-item">_observeds: Set</div>
+          <div class="arch-item">DerivationState</div>
+          <div class="arch-item">trackDerivedFn</div>
+        </div>
+      </div>
+      <div class="arch-cell side-col">
+        <div class="ac-title">💫 Reaction Layer</div>
+        <div class="ac-items">
+          <div class="arch-item">Reaction</div>
+          <div class="arch-item">pendingReactions[]</div>
+          <div class="arch-item">batchDepth counter</div>
+          <div class="arch-item">scheduleReaction</div>
+          <div class="arch-item">runReactions</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>双向边管理</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">dependency-graph.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="cm">// 每个 Derivation（Computed/Reaction）都持有双向边</span>
+<span class="kw">class</span> <span class="cls">Derivation</span> {
+  <span class="prop">observeds</span>    = <span class="kw">new</span> <span class="cls">Set</span>();  <span class="cm">// 我依赖的 observables（下游 → 上游）</span>
+  <span class="prop">newObserveds</span> = <span class="kw">new</span> <span class="cls">Set</span>();  <span class="cm">// 本次追踪收集到的新依赖</span>
+}
+
+<span class="cm">// 每个 Observable 也持有反向边</span>
+<span class="kw">class</span> <span class="cls">Observable</span> {
+  <span class="prop">observers</span> = <span class="kw">new</span> <span class="cls">Set</span>();  <span class="cm">// 依赖我的 derivations（上游 → 下游）</span>
+}
+
+<span class="cm">// 依赖 diff：每次重新追踪后，比较新旧依赖集合</span>
+<span class="kw">function</span> <span class="fn">diffAndUpdateDependencies</span>(derivation) {
+  <span class="kw">const</span> { <span class="var">observeds</span>, <span class="var">newObserveds</span> } = derivation;
+
+  <span class="cm">// 移除不再依赖的 observable</span>
+  <span class="var">observeds</span>.<span class="fn">forEach</span>(obs => {
+    <span class="kw">if</span> (!<span class="var">newObserveds</span>.<span class="fn">has</span>(obs)) {
+      obs.observers.<span class="fn">delete</span>(derivation);  <span class="cm">// 断开反向边</span>
+    }
+  });
+
+  <span class="cm">// 添加新依赖</span>
+  <span class="var">newObserveds</span>.<span class="fn">forEach</span>(obs => {
+    <span class="kw">if</span> (!<span class="var">observeds</span>.<span class="fn">has</span>(obs)) {
+      obs.observers.<span class="fn">add</span>(derivation);     <span class="cm">// 建立反向边</span>
+    }
+  });
+
+  derivation.observeds = <span class="var">newObserveds</span>;
+}</pre>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">🔑</div>
+      <div><strong>关键洞察</strong>：MobX 的依赖收集是<strong>动态的、运行时的</strong>——每次 Derivation 重新执行，依赖都会重新收集。这意味着条件分支中的依赖变化（如 if(a) b.x else c.y）会被精确追踪，只订阅实际访问的路径。</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 7 ═══════════════════════════════ -->
+  <section id="s-api">
+    <div class="section-header">
+      <div class="section-number">07</div>
+      <h2>MobX 全量 API 速查</h2>
+    </div>
+
+    <table class="impl-table">
+      <thead>
+        <tr>
+          <th>API</th>
+          <th>分类</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>makeObservable(target, annotations)</td><td>创建响应式</td><td>手动声明 observable/computed/action 注解，TypeScript 推荐写法</td></tr>
+        <tr><td>makeAutoObservable(target, overrides)</td><td>创建响应式</td><td>自动推断注解：属性→observable，getter→computed，方法→action</td></tr>
+        <tr><td>observable(value)</td><td>创建响应式</td><td>深度代理对象/数组/Map/Set；原始值用 .box()</td></tr>
+        <tr><td>observable.box(value)</td><td>创建响应式</td><td>包装原始值，通过 .get()/.set() 读写</td></tr>
+        <tr><td>observable.shallow</td><td>注解修饰符</td><td>浅层 observable，不递归代理子对象</td></tr>
+        <tr><td>observable.ref</td><td>注解修饰符</td><td>只追踪引用变化，不代理对象内部</td></tr>
+        <tr><td>computed(fn, options?)</td><td>派生值</td><td>创建缓存派生值；options: equals, keepAlive, requiresReaction</td></tr>
+        <tr><td>computed.struct</td><td>注解修饰符</td><td>用结构相等（深比较）判断派生值是否变化</td></tr>
+        <tr><td>action(fn)</td><td>变更</td><td>将函数包裹为事务，批量通知</td></tr>
+        <tr><td>action.bound</td><td>注解修饰符</td><td>自动绑定 this，方便回调使用</td></tr>
+        <tr><td>runInAction(fn)</td><td>变更</td><td>立即执行的匿名 action，用于 async/await 回调</td></tr>
+        <tr><td>flow(generatorFn)</td><td>变更</td><td>generator-based 异步 action，自动处理 yield 后的 runInAction</td></tr>
+        <tr><td>flowResult(promise)</td><td>工具</td><td>TypeScript 类型辅助，修正 flow 返回类型</td></tr>
+        <tr><td>autorun(fn, options?)</td><td>副作用</td><td>立即执行并追踪；options: delay, name, onError</td></tr>
+        <tr><td>reaction(data, effect, options?)</td><td>副作用</td><td>分离追踪和副作用；首次不执行 effect</td></tr>
+        <tr><td>when(predicate, effect?)</td><td>副作用</td><td>条件一次性触发；无 effect 时返回 Promise</td></tr>
+        <tr><td>onReactionError(fn)</td><td>调试</td><td>全局捕获 reaction 中的异常</td></tr>
+        <tr><td>intercept(observable, fn)</td><td>拦截器</td><td>拦截变更，可修改/取消更新</td></tr>
+        <tr><td>observe(observable, fn)</td><td>观察者</td><td>低级 API，立即调用，传递详细变更信息</td></tr>
+        <tr><td>isObservable(value)</td><td>工具/反射</td><td>判断是否为 observable</td></tr>
+        <tr><td>isObservableProp(obj, key)</td><td>工具/反射</td><td>判断属性是否被追踪</td></tr>
+        <tr><td>isComputed(value)</td><td>工具/反射</td><td>判断是否为 computed</td></tr>
+        <tr><td>isAction(fn)</td><td>工具/反射</td><td>判断函数是否被包裹为 action</td></tr>
+        <tr><td>toJS(observable)</td><td>工具</td><td>深度转换为普通 JS 值（去除 Proxy 包装）</td></tr>
+        <tr><td>configure(options)</td><td>配置</td><td>enforceActions, computedRequiresReaction, reactionScheduler 等</td></tr>
+        <tr><td>spy(listener)</td><td>调试</td><td>监听所有 MobX 事件（action/compute/reaction 等）</td></tr>
+        <tr><td>getDebugName(value)</td><td>调试</td><td>获取 observable/reaction 的调试名称</td></tr>
+        <tr><td>getDependencyTree(value)</td><td>调试</td><td>获取依赖树（用于 MobX DevTools）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════ MOBX-REACT ═══════════════════════════════ -->
+
+  <div class="mobx-react-banner" id="s-mr-intro">
+    <h2>mobx-react / mobx-react-lite</h2>
+    <p>将 MobX 响应式系统与 React 渲染机制深度连接的绑定层 —— 让 React 组件成为 MobX 的 Reaction</p>
+  </div>
+
+  <section id="s-mr-intro">
+    <div class="section-header">
+      <div class="section-number">08</div>
+      <h2>集成原理概述</h2>
+    </div>
+
+    <p>mobx-react 的本质是：<strong>将 React 组件的渲染函数（render）包装成一个 MobX Reaction</strong>。当组件渲染时自动追踪所有被访问的 observable；当依赖变化时，强制触发组件重渲染。</p>
+
+    <div class="diagram-box">
+      <div style="text-align:center;font-size:13px;color:var(--text-dim);font-family:var(--mono);margin-bottom:20px;">mobx-react 集成架构</div>
+      <div class="flow" style="flex-direction:column;align-items:flex-start;gap:0">
+        <div style="display:flex;align-items:center;gap:0;width:100%;justify-content:center;margin-bottom:8px">
+          <div class="flow-node" style="border-color:rgba(92,184,255,.4)">
+            <div class="fn-icon">⚛️</div>
+            <div class="fn-label" style="color:var(--blue)">React Component</div>
+            <div class="fn-sub">render() / FC body</div>
+          </div>
+          <div class="flow-arrow">⟵ wraps</div>
+          <div class="flow-node react">
+            <div class="fn-icon">👁️</div>
+            <div class="fn-label">observer()</div>
+            <div class="fn-sub">HOC / decorator</div>
+          </div>
+          <div class="flow-arrow">creates</div>
+          <div class="flow-node comp">
+            <div class="fn-icon">🔗</div>
+            <div class="fn-label">MobX Reaction</div>
+            <div class="fn-sub">per component instance</div>
+          </div>
+        </div>
+        <div style="width:100%;text-align:center;padding:12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text-dim)">
+          render 执行 → trackDerivedFunction() → 收集 observables → 依赖变化 → forceUpdate() / setState()
+        </div>
+      </div>
+    </div>
+
+    <h3>两个包的区别</h3>
+    <div class="cards">
+      <div class="card" style="border-color:rgba(92,184,255,.25)">
+        <div class="card-icon">🪶</div>
+        <div class="card-title">mobx-react-lite</div>
+        <p class="card-desc">仅支持函数式组件（Hooks）。体积更小，推荐在新项目使用。不支持 Class 组件和 Provider/inject。</p>
+      </div>
+      <div class="card" style="border-color:rgba(232,108,250,.25)">
+        <div class="card-icon">🏛️</div>
+        <div class="card-title">mobx-react</div>
+        <p class="card-desc">完整版，包含 Class 组件支持、Provider、inject。内部使用 mobx-react-lite 处理 FC。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 9 ═══════════════════════════════ -->
+  <section id="s-mr-observer">
+    <div class="section-header">
+      <div class="section-number">09</div>
+      <h2>observer HOC — 核心实现</h2>
+    </div>
+
+    <h3>函数式组件 observer</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">observer-fc-impl.jsx</div>
+        <div class="lang-badge">JSX</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="cls">Reaction</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+<span class="kw">import</span> { <span class="fn">useRef</span>, <span class="fn">useReducer</span>, <span class="fn">useEffect</span>, <span class="fn">forwardRef</span> } <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="kw">function</span> <span class="fn">observer</span>(baseComponent) {
+  <span class="kw">const</span> <span class="cls">WrappedComponent</span> = <span class="fn">forwardRef</span>((props, ref) => {
+    <span class="cm">// ① 强制更新触发器</span>
+    <span class="kw">const</span> [, <span class="var">forceUpdate</span>] = <span class="fn">useReducer</span>(x => x + <span class="num">1</span>, <span class="num">0</span>);
+
+    <span class="cm">// ② 每个实例持有一个 Reaction</span>
+    <span class="kw">const</span> <span class="var">reactionRef</span> = <span class="fn">useRef</span>(<span class="kw">null</span>);
+    <span class="kw">if</span> (!<span class="var">reactionRef</span>.current) {
+      <span class="var">reactionRef</span>.current = <span class="kw">new</span> <span class="cls">Reaction</span>(<span class="str">`observer(</span>${baseComponent.name}<span class="str">)`</span>, () => {
+        <span class="fn">forceUpdate</span>();  <span class="cm">// 依赖失效时触发 React 重渲染</span>
+      });
+    }
+
+    <span class="cm">// ③ 组件卸载时销毁 Reaction</span>
+    <span class="fn">useEffect</span>(() => {
+      <span class="kw">return</span> () => <span class="var">reactionRef</span>.current.<span class="fn">dispose</span>();
+    }, []);
+
+    <span class="cm">// ④ 在 Reaction.track() 内执行 render，自动收集依赖</span>
+    <span class="kw">let</span> <span class="var">renderResult</span>;
+    <span class="var">reactionRef</span>.current.<span class="fn">track</span>(() => {
+      renderResult = <span class="fn">baseComponent</span>(props, ref);
+    });
+
+    <span class="kw">return</span> <span class="var">renderResult</span>;
+  });
+
+  <span class="cls">WrappedComponent</span>.displayName = baseComponent.name;
+  <span class="kw">return</span> <span class="cls">WrappedComponent</span>;
+}
+
+<span class="cm">// 使用示例</span>
+<span class="kw">const</span> <span class="cls">Counter</span> = <span class="fn">observer</span>(({ store }) => (
+  &lt;<span class="cls">div</span>&gt;
+    &lt;<span class="cls">p</span>&gt;{store.count}&lt;/<span class="cls">p</span>&gt;   {<span class="cm">/* 读取触发追踪 */</span>}
+    &lt;<span class="cls">button</span> <span class="prop">onClick</span>={store.increment}&gt;+&lt;/<span class="cls">button</span>&gt;
+  &lt;/<span class="cls">div</span>&gt;
+));</pre>
+    </div>
+
+    <h3>Class 组件 observer（mobx-react）</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">observer-class-impl.jsx</div>
+        <div class="lang-badge">JSX</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="cls">Component</span> } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { <span class="cls">Reaction</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="kw">function</span> <span class="fn">makeClassComponentObserver</span>(<span class="cls">ComponentClass</span>) {
+  <span class="kw">const</span> <span class="var">proto</span> = <span class="cls">ComponentClass</span>.prototype;
+  <span class="kw">const</span> <span class="var">originalRender</span> = proto.render;
+
+  <span class="cm">// 劫持 componentDidMount：创建 Reaction</span>
+  <span class="kw">const</span> <span class="var">orgDidMount</span> = proto.componentDidMount;
+  proto.componentDidMount = <span class="kw">function</span>() {
+    <span class="kw">this</span>._mobxReaction = <span class="kw">new</span> <span class="cls">Reaction</span>(<span class="str">`observer(</span>${<span class="cls">ComponentClass</span>.name}<span class="str">)`</span>, () => {
+      <span class="kw">this</span>.<span class="fn">forceUpdate</span>();    <span class="cm">// Class 组件用 forceUpdate</span>
+    });
+    <span class="var">orgDidMount</span>?.<span class="fn">call</span>(<span class="kw">this</span>);
+  };
+
+  <span class="cm">// 劫持 componentWillUnmount：销毁 Reaction</span>
+  <span class="kw">const</span> <span class="var">orgWillUnmount</span> = proto.componentWillUnmount;
+  proto.componentWillUnmount = <span class="kw">function</span>() {
+    <span class="kw">this</span>._mobxReaction.<span class="fn">dispose</span>();
+    <span class="var">orgWillUnmount</span>?.<span class="fn">call</span>(<span class="kw">this</span>);
+  };
+
+  <span class="cm">// 劫持 render：包裹在 Reaction.track() 内</span>
+  proto.render = <span class="kw">function</span>() {
+    <span class="kw">let</span> <span class="var">result</span>;
+    <span class="kw">this</span>._mobxReaction.<span class="fn">track</span>(() => {
+      result = <span class="var">originalRender</span>.<span class="fn">call</span>(<span class="kw">this</span>);
+    });
+    <span class="kw">return</span> <span class="var">result</span>;
+  };
+
+  <span class="kw">return</span> <span class="cls">ComponentClass</span>;
+}</pre>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">💡</div>
+      <div>observer 函数组件使用 <strong>useReducer</strong> 而非 useState 来触发更新（避免触发 React 的 bail-out 优化），并将 Reaction 存在 <strong>useRef</strong> 中以确保整个组件生命周期共享同一个 Reaction 实例。</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 10 ═══════════════════════════════ -->
+  <section id="s-mr-hooks">
+    <div class="section-header">
+      <div class="section-number">10</div>
+      <h2>Hooks API</h2>
+    </div>
+
+    <h3>useLocalObservable — 组件本地 Store</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">hooks-demo.jsx</div>
+        <div class="lang-badge">JSX</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="fn">observer</span>, <span class="fn">useLocalObservable</span> } <span class="kw">from</span> <span class="str">'mobx-react-lite'</span>;
+
+<span class="kw">const</span> <span class="cls">Form</span> = <span class="fn">observer</span>(() => {
+  <span class="cm">// ① 创建组件本地响应式对象（只创建一次）</span>
+  <span class="kw">const</span> <span class="var">form</span> = <span class="fn">useLocalObservable</span>(() => ({
+    name: <span class="str">''</span>,
+    email: <span class="str">''</span>,
+    <span class="kw">get</span> <span class="fn">isValid</span>() {
+      <span class="kw">return</span> <span class="kw">this</span>.name.length > <span class="num">0</span> && <span class="kw">this</span>.email.<span class="fn">includes</span>(<span class="str">'@'</span>);
+    },
+    <span class="fn">setField</span>(key, value) {
+      <span class="kw">this</span>[key] = value;    <span class="cm">// action 自动推断</span>
+    }
+  }));
+
+  <span class="kw">return</span> (
+    &lt;<span class="cls">form</span>&gt;
+      &lt;<span class="cls">input</span>
+        <span class="prop">value</span>={form.name}
+        <span class="prop">onChange</span>={e => form.<span class="fn">setField</span>(<span class="str">'name'</span>, e.target.value)}
+      /&gt;
+      &lt;<span class="cls">input</span>
+        <span class="prop">value</span>={form.email}
+        <span class="prop">onChange</span>={e => form.<span class="fn">setField</span>(<span class="str">'email'</span>, e.target.value)}
+      /&gt;
+      &lt;<span class="cls">button</span> <span class="prop">disabled</span>={!form.isValid}&gt;提交&lt;/<span class="cls">button</span>&gt;
+    &lt;/<span class="cls">form</span>&gt;
+  );
+});</pre>
+    </div>
+
+    <h3>useLocalObservable 内部实现</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">useLocalObservable-impl.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="fn">useRef</span> } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { <span class="fn">makeAutoObservable</span> } <span class="kw">from</span> <span class="str">'mobx'</span>;
+
+<span class="kw">function</span> <span class="fn">useLocalObservable</span>(initializer, annotations) {
+  <span class="cm">// useRef 确保只在首次渲染时创建一次 observable 对象</span>
+  <span class="kw">const</span> <span class="var">storeRef</span> = <span class="fn">useRef</span>(<span class="kw">null</span>);
+  <span class="kw">if</span> (storeRef.current === <span class="kw">null</span>) {
+    storeRef.current = <span class="fn">makeAutoObservable</span>(
+      <span class="fn">initializer</span>(),      <span class="cm">// 调用工厂函数</span>
+      annotations,        <span class="cm">// 可选的 annotation overrides</span>
+      { autoBind: <span class="kw">true</span> }  <span class="cm">// 自动绑定 this</span>
+    );
+  }
+  <span class="kw">return</span> storeRef.current;
+}</pre>
+    </div>
+
+    <h3>Observer 组件 — 细粒度追踪</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">observer-component.jsx</div>
+        <div class="lang-badge">JSX</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="cls">Observer</span> } <span class="kw">from</span> <span class="str">'mobx-react-lite'</span>;
+
+<span class="cm">// 不想用 observer() 包裹整个组件时，可用 Observer 精确追踪子树</span>
+<span class="kw">function</span> <span class="cls">Dashboard</span>({ store }) {
+  <span class="kw">return</span> (
+    &lt;<span class="cls">div</span>&gt;
+      &lt;<span class="cls">h1</span>&gt;Dashboard&lt;/<span class="cls">h1</span>&gt;  {<span class="cm">/* 非响应式：不追踪 */</span>}
+
+      &lt;<span class="cls">Observer</span>&gt;
+        {() => &lt;<span class="cls">p</span>&gt;Count: {store.count}&lt;/<span class="cls">p</span>&gt;}
+        {<span class="cm">/* ↑ 只有这个 render prop 的子树是响应式的 */</span>}
+      &lt;/<span class="cls">Observer</span>&gt;
+    &lt;/<span class="cls">div</span>&gt;
+  );
+}
+
+<span class="cm">// Observer 内部实现本质上等同于一个匿名的 observer() FC：</span>
+<span class="kw">function</span> <span class="cls">Observer</span>({ children }) {
+  <span class="kw">return</span> <span class="fn">observer</span>(children)({});  <span class="cm">// 包装 render prop 为 observer FC</span>
+}</pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 11 ═══════════════════════════════ -->
+  <section id="s-mr-impl">
+    <div class="section-header">
+      <div class="section-number">11</div>
+      <h2>React Concurrent Mode 兼容性</h2>
+    </div>
+
+    <p>React 18 的并发模式带来了一个问题：<strong>渲染可能被中断和重试</strong>，这与 MobX Reaction 的设计存在潜在冲突。</p>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div><strong>Tearing 问题</strong>：并发渲染中，不同优先级的渲染可能读取到不同时间点的 observable 值，导致 UI 状态撕裂（tearing）。</div>
+    </div>
+
+    <h3>mobx-react-lite 的解决方案</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">concurrent-mode-fix.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="kw">import</span> { <span class="fn">useSyncExternalStore</span> } <span class="kw">from</span> <span class="str">'react'</span>;  <span class="cm">// React 18 API</span>
+
+<span class="cm">// mobx-react-lite v3.x 使用 useSyncExternalStore 解决 tearing</span>
+<span class="kw">function</span> <span class="fn">observerFC</span>(baseComponent) {
+  <span class="kw">return</span> (props) => {
+    <span class="kw">const</span> <span class="var">reactionRef</span> = <span class="fn">useRef</span>();
+    <span class="kw">if</span> (!<span class="var">reactionRef</span>.current) {
+      <span class="var">reactionRef</span>.current = <span class="kw">new</span> <span class="cls">Reaction</span>(<span class="str">'observer'</span>, notifyStore);
+    }
+
+    <span class="cm">// useSyncExternalStore 保证快照一致性，防止 tearing</span>
+    <span class="fn">useSyncExternalStore</span>(
+      <span class="var">subscribe</span>,    <span class="cm">// 订阅外部 store 变化</span>
+      <span class="var">getSnapshot</span>,  <span class="cm">// 获取当前快照</span>
+      <span class="var">getSnapshot</span>   <span class="cm">// 服务端快照</span>
+    );
+
+    <span class="kw">let</span> <span class="var">renderResult</span>;
+    <span class="var">reactionRef</span>.current.<span class="fn">track</span>(() => {
+      renderResult = <span class="fn">baseComponent</span>(props);
+    });
+    <span class="kw">return</span> <span class="var">renderResult</span>;
+  };
+}
+
+<span class="cm">// subscribe：将 React 更新回调与 MobX Reaction 连接</span>
+<span class="kw">function</span> <span class="fn">subscribe</span>(onStoreChange) {
+  <span class="var">reactionRef</span>.current.setScheduler(onStoreChange);
+  <span class="kw">return</span> () => <span class="var">reactionRef</span>.current.<span class="fn">dispose</span>();
+}</pre>
+    </div>
+
+    <h3>shouldComponentUpdate 优化（Class 组件）</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">scuopt.js</div>
+        <div class="lang-badge">JS</div>
+      </div>
+      <pre><span class="cm">// Class 组件 observer 自动实现 PureComponent 效果</span>
+<span class="cm">// 如果 forceUpdate 已触发，直接渲染（跳过 SCU）</span>
+proto.shouldComponentUpdate = <span class="kw">function</span>(nextProps) {
+  <span class="cm">// mobxUpdateTriggered = Reaction 触发的更新，必须渲染</span>
+  <span class="kw">if</span> (<span class="kw">this</span>._mobxUpdateTriggered) {
+    <span class="kw">this</span>._mobxUpdateTriggered = <span class="kw">false</span>;
+    <span class="kw">return true</span>;
+  }
+  <span class="cm">// 否则做浅比较（如 props 改变也需要重渲染）</span>
+  <span class="kw">return</span> !<span class="fn">shallowEqual</span>(<span class="kw">this</span>.props, nextProps);
+};</pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ SECTION 12 ═══════════════════════════════ -->
+  <section id="s-mr-api">
+    <div class="section-header">
+      <div class="section-number">12</div>
+      <h2>mobx-react / mobx-react-lite 完整 API</h2>
+    </div>
+
+    <table class="impl-table">
+      <thead>
+        <tr>
+          <th>API</th>
+          <th>来源</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>observer(component)</td><td>两者</td><td>将函数式组件包装为 MobX observer，渲染时自动追踪 observable 依赖</td></tr>
+        <tr><td>&lt;Observer&gt;{() => JSX}&lt;/Observer&gt;</td><td>两者</td><td>将 render prop 包装为 observer，实现组件内局部响应式区域</td></tr>
+        <tr><td>useLocalObservable(fn, annotations?)</td><td>两者</td><td>创建组件本地响应式 store，相当于 useRef(makeAutoObservable(fn()))</td></tr>
+        <tr><td>useObserver(fn, baseComponentName?)</td><td>两者</td><td>低级 Hook，在 Reaction.track() 内执行 fn，手动控制追踪范围（已废弃，推荐 observer）</td></tr>
+        <tr><td>enableStaticRendering(true)</td><td>两者</td><td>SSR 模式：禁止创建 Reaction（服务端不需要响应更新），防止内存泄漏</td></tr>
+        <tr><td>isUsingStaticRendering()</td><td>两者</td><td>查询当前是否处于 SSR 静态渲染模式</td></tr>
+        <tr><td>useAsObservableSource(value)</td><td>两者</td><td>将 React props/state 暴露为可追踪的 observable（已废弃，推荐 reaction 监听 props）</td></tr>
+        <tr><td>Provider</td><td>mobx-react</td><td>Context-based store 注入（已废弃，推荐 React.createContext + useContext）</td></tr>
+        <tr><td>inject(...storeNames)</td><td>mobx-react</td><td>从 Provider 注入 stores 到 props（已废弃，推荐 useContext）</td></tr>
+        <tr><td>disposeOnUnmount(instance, fn[])</td><td>mobx-react</td><td>Class 组件中注册 dispose 函数，在 componentWillUnmount 自动调用</td></tr>
+        <tr><td>componentDidMount / render 劫持</td><td>mobx-react</td><td>对 Class 组件使用 observer 时内部进行的生命周期劫持，用户无需感知</td></tr>
+        <tr><td>MobXProviderContext</td><td>mobx-react</td><td>Provider 使用的 React Context 对象，可直接 useContext 替代 inject</td></tr>
+      </tbody>
+    </table>
+
+    <h3>最佳实践：推荐模式</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="filename">best-practices.jsx</div>
+        <div class="lang-badge">JSX</div>
+      </div>
+      <pre><span class="cm">// ✅ 推荐：Context + useContext 替代 Provider/inject</span>
+<span class="kw">const</span> <span class="var">StoreContext</span> = <span class="fn">createContext</span>(<span class="kw">null</span>);
+
+<span class="kw">function</span> <span class="cls">App</span>() {
+  <span class="kw">const</span> <span class="var">store</span> = <span class="fn">useLocalObservable</span>(() => <span class="kw">new</span> <span class="cls">RootStore</span>());
+  <span class="kw">return</span> &lt;<span class="var">StoreContext</span>.<span class="prop">Provider</span> <span class="prop">value</span>={store}&gt;&lt;<span class="cls">Router</span> /&gt;&lt;/<span class="var">StoreContext</span>.<span class="prop">Provider</span>&gt;;
+}
+
+<span class="kw">function</span> <span class="fn">useStore</span>() { <span class="kw">return</span> <span class="fn">useContext</span>(<span class="var">StoreContext</span>); }
+
+<span class="kw">const</span> <span class="cls">Counter</span> = <span class="fn">observer</span>(() => {
+  <span class="kw">const</span> { counter } = <span class="fn">useStore</span>();   <span class="cm">// 获取 store</span>
+  <span class="kw">return</span> &lt;<span class="cls">button</span> <span class="prop">onClick</span>={counter.increment}&gt;{counter.count}&lt;/<span class="cls">button</span>&gt;;
+});
+
+<span class="cm">// ✅ 细粒度 observer：尽量让 observer 组件小而专注</span>
+<span class="cm">// 避免：一个大的 observer 组件追踪了整个 store 树</span>
+<span class="cm">// 推荐：将展示部分拆分为小 observer，只追踪所需字段</span>
+
+<span class="cm">// ✅ SSR 正确配置</span>
+<span class="kw">import</span> { <span class="fn">enableStaticRendering</span> } <span class="kw">from</span> <span class="str">'mobx-react-lite'</span>;
+<span class="fn">enableStaticRendering</span>(<span class="kw">typeof</span> window === <span class="str">'undefined'</span>);</pre>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div>MobX 深度解析 · 基于 MobX v6 & mobx-react-lite v3</div>
+  <div class="footer-tags">
+    <span class="tag v1">MobX 6</span>
+    <span class="tag v2">mobx-react-lite 3</span>
+    <span class="tag v3">React 18</span>
+  </div>
+</footer>
+
+<script>
+  // ─── THEME TOGGLE ───
+  function toggleTheme() {
+    const isLight = document.documentElement.classList.toggle('light');
+    const label = document.getElementById('themeLabel');
+    const icon  = document.querySelector('.tt-icon');
+    label.textContent = isLight ? '浅色模式' : '深色模式';
+    icon.textContent  = isLight ? '☀️' : '🌙';
+    localStorage.setItem('mobx-theme', isLight ? 'light' : 'dark');
+  }
+
+  // Restore saved theme
+  (function() {
+    const saved = localStorage.getItem('mobx-theme');
+    if (saved === 'light') {
+      document.documentElement.classList.add('light');
+      document.addEventListener('DOMContentLoaded', () => {
+        const label = document.getElementById('themeLabel');
+        const icon  = document.querySelector('.tt-icon');
+        if (label) label.textContent = '浅色模式';
+        if (icon)  icon.textContent  = '☀️';
+      });
+    }
+  })();
+  // Tab switching
+  function switchTab(btn, panelId) {
+    const tabs = btn.closest('.tabs');
+    tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    tabs.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(panelId).classList.add('active');
+  }
+
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section');
+  const navLinks = document.querySelectorAll('nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => {
+          a.classList.remove('active');
+          if (a.getAttribute('href') === '#' + e.target.id) {
+            a.classList.add('active');
+          }
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Fade-in animation on load
+  document.querySelectorAll('section, .hero').forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = `opacity .5s ease ${i * .07}s, transform .5s ease ${i * .07}s`;
+    setTimeout(() => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 100);
+  });
+</script>
+</body>
+</html>
