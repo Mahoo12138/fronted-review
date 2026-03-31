@@ -1,6 +1,6 @@
 import { createGlobalTheme, createTheme } from "@vanilla-extract/css";
 
-export const [lightTheme, themeVars] = createTheme({
+export const [light, themeVars] = createTheme({
   color: {
     primary: "#007aff",
 
@@ -29,7 +29,7 @@ export const [lightTheme, themeVars] = createTheme({
 });
 
 
-export const darkTheme = createTheme(themeVars, {
+export const dark = createTheme(themeVars, {
   color: {
     primary: "#0a84ff",
 
@@ -56,6 +56,8 @@ export const darkTheme = createTheme(themeVars, {
     m: "16px",
   },
 });
+
+export const themes = { light, dark };
 
 export const globalVars = createGlobalTheme(":root", {
   color: {
