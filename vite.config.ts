@@ -1,8 +1,10 @@
+import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
-import path from 'path'
+import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
+
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -10,6 +12,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     tanstackRouter(),
+    vanillaExtractPlugin(),
   ],
   resolve: {
     alias: {
