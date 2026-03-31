@@ -1,8 +1,12 @@
 import Hero from "./components/Hero";
+import Intro from "./components/Intro";
+
+import * as styles from "./index.css";
 function MobxTutorial() {
   return (
-    <div>
+    <div className={styles.mobxContainer}>
       <Hero />
+      <Intro />
     </div>
   );
 }

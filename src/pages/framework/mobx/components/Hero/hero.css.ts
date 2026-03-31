@@ -1,9 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { themeVars } from "@/index.css";
 
-console.log('themeVars2', themeVars);
-
-
 export const hero = style({
   padding: "80px 0 60px",
   position: "relative",
@@ -29,7 +26,7 @@ export const heroBadge = style({
   gap: "8px",
   background: "rgba(124,106,247,.15)",
   border: "1px solid rgba(124,106,247,.35)",
-  color: "var(--accent)",
+  color: themeVars.color.violet,
   fontSize: "12px",
   fontFamily: "var(--mono)",
   padding: "5px 14px",
@@ -50,7 +47,7 @@ export const heroGlow = style({
 
 export const heroDesc = style({
   fontSize: "17px",
-  color: "var(--text-dim)",
+  color: themeVars.color.textDim,
   maxWidth: "620px",
   lineHeight: 1.8,
 });
