@@ -1,0 +1,2870 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JavaScript 事件循环 · 交互教程</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap");
+
+      :root {
+        --bg: #0a0c10;
+        --surface: #111318;
+        --surface2: #181c24;
+        --border: #1f2533;
+        --text: #c9d1e0;
+        --muted: #4a5568;
+        --accent: #00c2d4;
+        --accent2: #7c3aed;
+        --accent3: #f59e0b;
+        --green: #10b981;
+        --red: #ef4444;
+        --pink: #ec4899;
+        --stack: #1e3a5f;
+        --stack-border: #2563eb;
+        --macro: #3d1f00;
+        --macro-border: #f59e0b;
+        --micro: #1a0f3d;
+        --micro-border: #7c3aed;
+        --nav-bg: rgba(10, 12, 16, 0.92);
+        --hero-grad: rgba(0, 194, 212, 0.08);
+        --code-bg: #0d1117;
+      }
+
+      /* ── LIGHT THEME ── */
+      html.light {
+        --bg: #f4f6fa;
+        --surface: #ffffff;
+        --surface2: #eef1f7;
+        --border: #d4d9e8;
+        --text: #2d3550;
+        --muted: #8390a8;
+        --accent: #0088a8;
+        --accent2: #6d28d9;
+        --accent3: #d97706;
+        --green: #059669;
+        --red: #dc2626;
+        --pink: #db2777;
+        --stack: #dbeafe;
+        --stack-border: #3b82f6;
+        --macro: #fef3c7;
+        --macro-border: #d97706;
+        --micro: #ede9fe;
+        --micro-border: #7c3aed;
+        --nav-bg: rgba(244, 246, 250, 0.94);
+        --hero-grad: rgba(0, 136, 168, 0.07);
+        --code-bg: #f0f3fa;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        transition:
+          background 0.35s,
+          color 0.35s;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Syne", sans-serif;
+        line-height: 1.6;
+        overflow-x: hidden;
+        transition:
+          background 0.35s,
+          color 0.35s;
+      }
+
+      /* ── NAV ── */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--nav-bg);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        padding: 0 1.25rem 0 2rem;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        height: 56px;
+        overflow-x: auto;
+        transition:
+          background 0.35s,
+          border-color 0.35s;
+      }
+
+      /* ── FIXED PROGRESS BAR ── */
+      .fixed-progress {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        z-index: 99;
+        height: 3px;
+        background: transparent;
+        pointer-events: none;
+      }
+      .fixed-progress-inner {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        border-radius: 0 2px 2px 0;
+        transition: width 0.4s ease;
+        width: 0%;
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+      }
+      .fixed-progress-label {
+        position: fixed;
+        top: 59px;
+        right: 1rem;
+        z-index: 99;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.6rem;
+        color: var(--accent);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        letter-spacing: 0.08em;
+        text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+      }
+      .fixed-progress-label.visible {
+        opacity: 1;
+      }
+      nav .logo {
+        font-weight: 800;
+        font-size: 1rem;
+        color: var(--accent);
+        margin-right: 2rem;
+        white-space: nowrap;
+      }
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0 1rem;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        white-space: nowrap;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      nav a:hover,
+      nav a.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      /* ── THEME TOGGLE ── */
+      .theme-toggle {
+        margin-left: auto;
+        flex-shrink: 0;
+        width: 44px;
+        height: 24px;
+        border-radius: 99px;
+        background: var(--surface2);
+        border: 1.5px solid var(--border);
+        cursor: pointer;
+        position: relative;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+        display: flex;
+        align-items: center;
+        padding: 2px;
+      }
+      .theme-toggle:hover {
+        border-color: var(--accent);
+      }
+      .theme-toggle-knob {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--muted);
+        transition:
+          transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+          background 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        line-height: 1;
+      }
+      html.light .theme-toggle-knob {
+        transform: translateX(20px);
+        background: var(--accent3);
+      }
+      html:not(.light) .theme-toggle-knob {
+        transform: translateX(0);
+        background: #334155;
+      }
+
+      /* ── HERO ── */
+      .hero {
+        text-align: center;
+        padding: 5rem 2rem 3rem;
+        background: radial-gradient(
+          ellipse 60% 50% at 50% 0%,
+          var(--hero-grad),
+          transparent
+        );
+        border-bottom: 1px solid var(--border);
+        transition:
+          background 0.35s,
+          border-color 0.35s;
+      }
+      .hero-tag {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        color: var(--accent);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+      }
+      .hero h1 {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        color: #fff;
+      }
+      .hero h1 span {
+        color: var(--accent);
+      }
+      .hero p {
+        margin-top: 1rem;
+        color: var(--muted);
+        max-width: 560px;
+        margin-inline: auto;
+        font-size: 1rem;
+      }
+
+      /* ── SECTIONS ── */
+      section {
+        padding: 4rem 1.5rem;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      .section-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.65rem;
+        color: var(--accent2);
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+      }
+      h2 {
+        font-size: 1.9rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 0.75rem;
+      }
+      h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #dde;
+        margin: 1.5rem 0 0.5rem;
+      }
+      p {
+        color: var(--text);
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+      }
+      .divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 3rem 0;
+      }
+
+      /* ── CARDS ── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      .card.accent {
+        border-color: var(--accent);
+        background: rgba(0, 229, 255, 0.04);
+      }
+      .card.warn {
+        border-color: var(--accent3);
+        background: rgba(245, 158, 11, 0.04);
+      }
+
+      .pill {
+        display: inline-block;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.68rem;
+        padding: 0.2em 0.6em;
+        border-radius: 4px;
+        font-weight: 600;
+        vertical-align: middle;
+        margin: 0 2px;
+      }
+      .pill.macro {
+        background: var(--macro);
+        color: var(--accent3);
+        border: 1px solid var(--macro-border);
+      }
+      .pill.micro {
+        background: var(--micro);
+        color: #a78bfa;
+        border: 1px solid var(--micro-border);
+      }
+      .pill.stack {
+        background: var(--stack);
+        color: #60a5fa;
+        border: 1px solid var(--stack-border);
+      }
+
+      /* ── CODE ── */
+      pre {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1.25rem;
+        overflow-x: auto;
+        line-height: 1.75;
+        position: relative;
+        transition:
+          background 0.35s,
+          border-color 0.35s;
+      }
+      /* light-mode syntax colours */
+      html.light .kw {
+        color: #7c3aed;
+      }
+      html.light .fn {
+        color: #1d4ed8;
+      }
+      html.light .str {
+        color: #15803d;
+      }
+      html.light .cm {
+        color: #94a3b8;
+        font-style: italic;
+      }
+      html.light .num {
+        color: #c2410c;
+      }
+      html.light .co {
+        color: #0369a1;
+      }
+      .kw {
+        color: #c792ea;
+      }
+      .fn {
+        color: #82aaff;
+      }
+      .str {
+        color: #c3e88d;
+      }
+      .cm {
+        color: #546e7a;
+        font-style: italic;
+      }
+      .num {
+        color: #f78c6c;
+      }
+      .co {
+        color: #89ddff;
+      }
+
+      /* ── VISUALIZER ── */
+      .visualizer {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+      }
+      .viz-title {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        color: var(--muted);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+      }
+
+      .viz-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+      }
+      @media (max-width: 680px) {
+        .viz-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .viz-box {
+        border-radius: 10px;
+        padding: 1rem;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+      }
+      .viz-box.stack-box {
+        background: var(--stack);
+        border: 2px solid var(--stack-border);
+      }
+      .viz-box.macro-box {
+        background: var(--macro);
+        border: 2px solid var(--macro-border);
+      }
+      .viz-box.micro-box {
+        background: var(--micro);
+        border: 2px solid var(--micro-border);
+      }
+      .viz-box h4 {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 0.75rem;
+      }
+      .viz-box.stack-box h4 {
+        color: #60a5fa;
+      }
+      .viz-box.macro-box h4 {
+        color: var(--accent3);
+      }
+      .viz-box.micro-box h4 {
+        color: #a78bfa;
+      }
+
+      .viz-items {
+        flex: 1;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 4px;
+      }
+      .viz-item {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.3rem 0.5rem;
+        border-radius: 5px;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transform: translateY(8px);
+      }
+      .viz-item.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .viz-item.stack-item {
+        background: rgba(37, 99, 235, 0.5);
+        color: #93c5fd;
+      }
+      .viz-item.macro-item {
+        background: rgba(245, 158, 11, 0.3);
+        color: #fcd34d;
+      }
+      .viz-item.micro-item {
+        background: rgba(124, 58, 237, 0.4);
+        color: #c4b5fd;
+      }
+      .viz-item.executing {
+        animation: pulse-exec 0.5s ease;
+      }
+      @keyframes pulse-exec {
+        0%,
+        100% {
+          box-shadow: none;
+        }
+        50% {
+          box-shadow: 0 0 16px rgba(0, 229, 255, 0.6);
+        }
+      }
+
+      .viz-log {
+        margin-top: 1rem;
+        background: var(--code-bg);
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        min-height: 60px;
+        max-height: 120px;
+        overflow-y: auto;
+        transition: background 0.35s;
+      }
+      .log-line {
+        padding: 1px 0;
+      }
+      .log-line span {
+        color: var(--accent);
+      }
+
+      .viz-controls {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+      }
+      .btn {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.45rem 1rem;
+        border-radius: 7px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.05em;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #000;
+      }
+      .btn-primary:hover {
+        background: #33eaff;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .btn-small {
+        padding: 0.3rem 0.65rem;
+        font-size: 0.7rem;
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .select-code {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 0.45rem 0.75rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        cursor: pointer;
+        outline: none;
+      }
+
+      /* ── NODE PHASES ── */
+      .node-phases {
+        display: flex;
+        gap: 0;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        margin: 1.5rem 0;
+      }
+      .phase {
+        flex: 1;
+        padding: 1rem 0.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s;
+        border-right: 1px solid var(--border);
+        position: relative;
+        min-width: 80px;
+      }
+      .phase:last-child {
+        border-right: none;
+      }
+      .phase:hover {
+        background: var(--surface2);
+      }
+      .phase.active {
+        background: rgba(0, 229, 255, 0.08);
+      }
+      .phase.active::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--accent);
+      }
+      .phase-num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.6rem;
+        color: var(--muted);
+      }
+      .phase-name {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-top: 0.25rem;
+        line-height: 1.2;
+      }
+      .phase-desc {
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-top: 0.25rem;
+      }
+      .phase-detail {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1.25rem;
+        margin-top: 0.5rem;
+        display: none;
+      }
+      .phase-detail.show {
+        display: block;
+        animation: fadeIn 0.3s;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* ── DIFF TABLE ── */
+      .diff-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 1rem 0;
+      }
+      .diff-table th {
+        background: var(--surface2);
+        padding: 0.75rem 1rem;
+        font-size: 0.78rem;
+        text-align: left;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .diff-table td {
+        padding: 0.75rem 1rem;
+        font-size: 0.82rem;
+        border-top: 1px solid var(--border);
+        vertical-align: top;
+      }
+      .diff-table tr:hover td {
+        background: var(--surface2);
+      }
+      .diff-table .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .diff-table .browser-col {
+        color: #60a5fa;
+      }
+      .diff-table .node-col {
+        color: var(--green);
+      }
+
+      /* ── QUIZ ── */
+      .quiz-container {
+        margin: 1.5rem 0;
+      }
+      .quiz-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+      }
+      .quiz-num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.65rem;
+        color: var(--muted);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .quiz-badge {
+        font-size: 0.6rem;
+        padding: 0.2em 0.5em;
+        border-radius: 4px;
+        font-weight: 700;
+      }
+      .badge-classic {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--green);
+        border: 1px solid var(--green);
+      }
+      .badge-advanced {
+        background: rgba(124, 58, 237, 0.2);
+        color: #a78bfa;
+        border: 1px solid var(--accent2);
+      }
+      .badge-expert {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--red);
+        border: 1px solid var(--red);
+      }
+
+      .quiz-question {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #dde;
+        margin-bottom: 0.75rem;
+      }
+      .quiz-code {
+        margin: 0.75rem 0;
+      }
+      .quiz-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+      }
+      .quiz-opt {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+        color: var(--text);
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.6;
+        width: 100%;
+      }
+      .quiz-opt:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(0, 229, 255, 0.05);
+      }
+      .quiz-opt.correct {
+        border-color: var(--green);
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--green);
+      }
+      .quiz-opt.wrong {
+        border-color: var(--red);
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--red);
+      }
+      .quiz-opt.reveal {
+        border-color: var(--green);
+        background: rgba(16, 185, 129, 0.07);
+        color: var(--green);
+      }
+      .quiz-opt:disabled {
+        cursor: default;
+      }
+
+      .quiz-reveal {
+        margin-top: 1rem;
+        display: none;
+      }
+      .quiz-reveal.show {
+        display: block;
+        animation: fadeIn 0.3s;
+      }
+      .quiz-explain {
+        background: var(--surface2);
+        border-left: 3px solid var(--accent2);
+        border-radius: 0 8px 8px 0;
+        padding: 1rem;
+        font-size: 0.82rem;
+        color: var(--text);
+        line-height: 1.7;
+      }
+      .quiz-explain strong {
+        color: #fff;
+      }
+
+      .quiz-score {
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        border-radius: 14px;
+        padding: 2rem;
+        text-align: center;
+        display: none;
+      }
+      .quiz-score.show {
+        display: block;
+        animation: fadeIn 0.4s;
+      }
+      .score-num {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--accent);
+      }
+      .score-msg {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      /* ── TABS ── */
+      .tabs {
+        display: flex;
+        gap: 0;
+        border-radius: 10px 10px 0 0;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-bottom: none;
+      }
+      .tab {
+        flex: 1;
+        padding: 0.6rem 1rem;
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--muted);
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+      }
+      .tab:last-child {
+        border-right: none;
+      }
+      .tab.active {
+        background: var(--surface2);
+        color: var(--accent);
+      }
+      .tab-body {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 0 0 10px 10px;
+        padding: 1.25rem;
+        display: none;
+      }
+      .tab-body.active {
+        display: block;
+        animation: fadeIn 0.25s;
+      }
+
+      /* ── SCROLLBAR ── */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 99px;
+      }
+
+      /* ── LIGHT MODE COMPONENT OVERRIDES ── */
+      html.light .viz-box.stack-box {
+        background: #dbeafe;
+        border-color: #3b82f6;
+      }
+      html.light .viz-box.macro-box {
+        background: #fef3c7;
+        border-color: #d97706;
+      }
+      html.light .viz-box.micro-box {
+        background: #ede9fe;
+        border-color: #7c3aed;
+      }
+      html.light .viz-box.stack-box h4 {
+        color: #1d4ed8;
+      }
+      html.light .viz-box.macro-box h4 {
+        color: #92400e;
+      }
+      html.light .viz-box.micro-box h4 {
+        color: #5b21b6;
+      }
+      html.light .viz-item.stack-item {
+        background: rgba(59, 130, 246, 0.18);
+        color: #1e40af;
+      }
+      html.light .viz-item.macro-item {
+        background: rgba(245, 158, 11, 0.22);
+        color: #92400e;
+      }
+      html.light .viz-item.micro-item {
+        background: rgba(124, 58, 237, 0.16);
+        color: #5b21b6;
+      }
+      html.light .log-line span {
+        color: var(--accent);
+      }
+      html.light .card.accent {
+        border-color: var(--accent);
+        background: rgba(0, 136, 168, 0.05);
+      }
+      html.light .card.warn {
+        border-color: var(--accent3);
+        background: rgba(217, 119, 6, 0.05);
+      }
+      html.light .pill.macro {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      html.light .pill.micro {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
+      html.light .pill.stack {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      html.light .highlight-box.info {
+        background: rgba(0, 136, 168, 0.06);
+        border-color: rgba(0, 136, 168, 0.25);
+      }
+      html.light .highlight-box.warn {
+        background: rgba(217, 119, 6, 0.06);
+        border-color: rgba(217, 119, 6, 0.25);
+      }
+      html.light .highlight-box.success {
+        background: rgba(5, 150, 105, 0.06);
+        border-color: rgba(5, 150, 105, 0.25);
+      }
+      html.light .phase {
+        background: var(--surface);
+      }
+      html.light .phase:hover {
+        background: var(--surface2);
+      }
+      html.light .phase.active {
+        background: rgba(0, 136, 168, 0.08);
+      }
+      html.light .phase.active::after {
+        background: var(--accent);
+      }
+      html.light .tab {
+        background: var(--surface);
+      }
+      html.light .tab.active {
+        background: var(--surface2);
+        color: var(--accent);
+      }
+      html.light .tab-body {
+        background: var(--surface2);
+      }
+      html.light .quiz-opt {
+        background: var(--surface2);
+        color: var(--text);
+      }
+      html.light .quiz-opt:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(0, 136, 168, 0.06);
+      }
+      html.light .select-code {
+        background: var(--surface2);
+        color: var(--text);
+      }
+      html.light .visualizer {
+        background: var(--surface);
+      }
+      html.light .phase-detail {
+        background: var(--surface);
+      }
+      html.light .quiz-explain {
+        background: var(--surface2);
+      }
+      html.light .quiz-score {
+        background: var(--surface);
+      }
+      html.light h2 {
+        color: #1a202c;
+      }
+      html.light h3 {
+        color: #2d3748;
+      }
+      html.light .hero h1 {
+        color: #1a202c;
+      }
+      html.light .section-label {
+        color: var(--accent2);
+      }
+
+      /* ── HIGHLIGHT BOX ── */
+      .highlight-box {
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        font-size: 0.85rem;
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+      .highlight-box .icon {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .highlight-box.info {
+        background: rgba(0, 229, 255, 0.06);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+      }
+      .highlight-box.warn {
+        background: rgba(245, 158, 11, 0.06);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+      }
+      .highlight-box.success {
+        background: rgba(16, 185, 129, 0.06);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+
+      /* ── LOOP DIAGRAM (circular SVG) ── */
+      .loop-diagram-wrap {
+        display: flex;
+        justify-content: center;
+        margin: 1.75rem 0;
+      }
+      .loop-diagram-wrap svg {
+        max-width: 480px;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+
+      /* ── FOOTER ── */
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="logo">⚡ EventLoop</div>
+      <a href="#intro" class="active">基础概念</a>
+      <a href="#browser">浏览器</a>
+      <a href="#node">Node.js</a>
+      <a href="#diff">差异对比</a>
+      <a href="#quiz">练习题</a>
+      <button
+        class="theme-toggle"
+        id="themeToggle"
+        onclick="toggleTheme()"
+        title="切换深色/浅色主题"
+        aria-label="切换主题"
+      >
+        <div class="theme-toggle-knob" id="themeKnob">🌙</div>
+      </button>
+    </nav>
+
+    <!-- Fixed progress bar -->
+    <div class="fixed-progress">
+      <div class="fixed-progress-inner" id="globalProgress"></div>
+    </div>
+    <div class="fixed-progress-label" id="progressLabel">0%</div>
+
+    <div class="hero">
+      <div class="hero-tag">// Interactive Tutorial</div>
+      <h1>JavaScript <span>事件循环</span><br />深度解析</h1>
+      <p>从调用栈到微任务队列，从浏览器到 Node.js，彻底搞懂 JS 异步执行机制</p>
+    </div>
+
+    <!-- ══════════ INTRO ══════════ -->
+    <section id="intro">
+      <div class="section-label">// Chapter 01</div>
+      <h2>事件循环基础概念</h2>
+      <p>
+        JavaScript 是<strong>单线程</strong>语言，但它能通过事件循环（Event
+        Loop）实现非阻塞的异步操作。理解事件循环，是掌握 JS 异步行为的关键。
+      </p>
+
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          margin: 1.5rem 0;
+        "
+      >
+        <div class="card accent">
+          <div class="pill stack">Call Stack</div>
+          <h3 style="margin-top: 0.75rem">调用栈</h3>
+          <p style="font-size: 0.82rem; color: var(--muted)">
+            LIFO 结构，同步代码在此执行。函数调用入栈，返回出栈。
+          </p>
+        </div>
+        <div class="card warn">
+          <div class="pill macro">Macro Task</div>
+          <h3 style="margin-top: 0.75rem">宏任务队列</h3>
+          <p style="font-size: 0.82rem; color: var(--muted)">
+            setTimeout、setInterval、I/O、UI 事件等。每次事件循环取一个执行。
+          </p>
+        </div>
+        <div
+          class="card"
+          style="
+            border-color: var(--accent2);
+            background: rgba(124, 58, 237, 0.04);
+          "
+        >
+          <div class="pill micro">Micro Task</div>
+          <h3 style="margin-top: 0.75rem">微任务队列</h3>
+          <p style="font-size: 0.82rem; color: var(--muted)">
+            Promise.then、queueMicrotask、MutationObserver。调用栈空时<strong>全部</strong>执行。
+          </p>
+        </div>
+      </div>
+
+      <div class="loop-diagram-wrap">
+        <svg
+          viewBox="0 0 440 300"
+          xmlns="http://www.w3.org/2000/svg"
+          id="loopSvg"
+        >
+          <defs>
+            <marker
+              id="arr1"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L8,3 z" fill="#2563eb" />
+            </marker>
+            <marker
+              id="arr2"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L8,3 z" fill="#7c3aed" />
+            </marker>
+            <marker
+              id="arr3"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b" />
+            </marker>
+            <filter id="glow1">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="glow2">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="glow3">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Center label -->
+          <text
+            x="220"
+            y="145"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="9"
+            fill="#4a5568"
+            letter-spacing="2"
+          >
+            EVENT
+          </text>
+          <text
+            x="220"
+            y="162"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="9"
+            fill="#4a5568"
+            letter-spacing="2"
+          >
+            LOOP
+          </text>
+          <circle
+            cx="220"
+            cy="152"
+            r="34"
+            fill="none"
+            stroke="#1f2533"
+            stroke-width="1"
+            stroke-dasharray="4 3"
+          />
+
+          <!-- Arrow 1: Call Stack → Microtask (top → bottom-right, clockwise) -->
+          <!-- From node1 (220,52) edge to node2 (342,224) edge, curved right -->
+          <path
+            d="M 268,80 Q 370,120 330,200"
+            fill="none"
+            stroke="#2563eb"
+            stroke-width="1.8"
+            stroke-dasharray="none"
+            marker-end="url(#arr1)"
+            opacity="0.85"
+          />
+
+          <!-- Arrow 2: Microtask → Macrotask (bottom-right → bottom-left) -->
+          <path
+            d="M 295,240 Q 220,275 148,240"
+            fill="none"
+            stroke="#7c3aed"
+            stroke-width="1.8"
+            marker-end="url(#arr2)"
+            opacity="0.85"
+          />
+
+          <!-- Arrow 3: Macrotask → Call Stack (bottom-left → top, completing loop) -->
+          <path
+            d="M 110,200 Q 70,120 172,80"
+            fill="none"
+            stroke="#f59e0b"
+            stroke-width="1.8"
+            marker-end="url(#arr3)"
+            opacity="0.85"
+          />
+
+          <!-- Node 1: Call Stack (top) -->
+          <rect
+            x="148"
+            y="18"
+            width="144"
+            height="52"
+            rx="10"
+            fill="#1e3a5f"
+            stroke="#2563eb"
+            stroke-width="1.5"
+            filter="url(#glow1)"
+          />
+          <text
+            x="220"
+            y="40"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="10"
+            font-weight="700"
+            fill="#60a5fa"
+          >
+            执行同步代码
+          </text>
+          <text
+            x="220"
+            y="58"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8.5"
+            fill="#3b82f6"
+          >
+            Call Stack
+          </text>
+
+          <!-- Node 2: Microtask (bottom-right) -->
+          <rect
+            x="298"
+            y="200"
+            width="136"
+            height="52"
+            rx="10"
+            fill="#1a0f3d"
+            stroke="#7c3aed"
+            stroke-width="1.5"
+            filter="url(#glow2)"
+          />
+          <text
+            x="366"
+            y="222"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="10"
+            font-weight="700"
+            fill="#a78bfa"
+          >
+            清空微任务
+          </text>
+          <text
+            x="366"
+            y="240"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8.5"
+            fill="#7c3aed"
+          >
+            Microtask Queue
+          </text>
+
+          <!-- Node 3: Macrotask (bottom-left) -->
+          <rect
+            x="6"
+            y="200"
+            width="136"
+            height="52"
+            rx="10"
+            fill="#3d1f00"
+            stroke="#f59e0b"
+            stroke-width="1.5"
+            filter="url(#glow3)"
+          />
+          <text
+            x="74"
+            y="222"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="10"
+            font-weight="700"
+            fill="#fcd34d"
+          >
+            取一个宏任务
+          </text>
+          <text
+            x="74"
+            y="240"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8.5"
+            fill="#f59e0b"
+          >
+            Macrotask Queue
+          </text>
+
+          <!-- Step labels on arrows -->
+          <text
+            x="332"
+            y="140"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#2563eb"
+            opacity="0.9"
+          >
+            ① 栈空
+          </text>
+          <text
+            x="220"
+            y="272"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#7c3aed"
+            opacity="0.9"
+          >
+            ② 微任务全清空
+          </text>
+          <text
+            x="100"
+            y="140"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#f59e0b"
+            opacity="0.9"
+          >
+            ③ 下一轮
+          </text>
+        </svg>
+      </div>
+
+      <div class="highlight-box info">
+        <span class="icon">💡</span>
+        <div>
+          <strong>核心规则：</strong
+          >每次取出一个宏任务执行完毕后，必须把微任务队列<strong>全部清空</strong>，才能进入下一个宏任务。微任务产生的新微任务也会被立即处理。
+        </div>
+      </div>
+
+      <h3>📺 交互可视化 — 逐步观察任务调度</h3>
+      <p style="font-size: 0.83rem; color: var(--muted)">
+        选择一个代码示例，点击
+        <strong>逐步执行</strong> 观察调用栈、微任务队列、宏任务队列的变化。
+      </p>
+
+      <div class="visualizer">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+          "
+        >
+          <select class="select-code" id="demoSelect" onchange="loadDemo()">
+            <option value="0">示例 1：基础 Promise + setTimeout</option>
+            <option value="1">示例 2：Promise 链式调用</option>
+            <option value="2">示例 3：微任务嵌套</option>
+          </select>
+        </div>
+
+        <pre
+          id="demoCode"
+          style="font-size: 0.75rem; max-height: 160px; overflow-y: auto"
+        ></pre>
+
+        <div class="viz-grid" style="margin-top: 1rem">
+          <div class="viz-box stack-box">
+            <h4>📦 Call Stack</h4>
+            <div class="viz-items" id="stackItems"></div>
+          </div>
+          <div class="viz-box micro-box">
+            <h4>⚡ Microtask Queue</h4>
+            <div
+              class="viz-items"
+              id="microItems"
+              style="flex-direction: column"
+            ></div>
+          </div>
+          <div class="viz-box macro-box">
+            <h4>⏱ Macrotask Queue</h4>
+            <div
+              class="viz-items"
+              id="macroItems"
+              style="flex-direction: column"
+            ></div>
+          </div>
+        </div>
+
+        <div class="viz-log" id="vizLog">
+          <div style="color: var(--muted)">// 点击运行查看输出...</div>
+        </div>
+
+        <div class="viz-controls">
+          <button class="btn btn-primary" id="btnStep" onclick="stepExec()">
+            ▶ 逐步执行
+          </button>
+          <button class="btn btn-secondary" onclick="autoRun()">
+            ⚡ 自动运行
+          </button>
+          <button class="btn btn-secondary" onclick="resetDemo()">
+            ↺ 重置
+          </button>
+          <span
+            id="stepHint"
+            style="
+              font-family: &quot;JetBrains Mono&quot;, monospace;
+              font-size: 0.7rem;
+              color: var(--muted);
+              align-self: center;
+            "
+          ></span>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ══════════ BROWSER ══════════ -->
+    <section id="browser">
+      <div class="section-label">// Chapter 02</div>
+      <h2>浏览器事件循环</h2>
+      <p>浏览器的事件循环相对简单，分为两类任务：</p>
+
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          margin: 1.5rem 0;
+        "
+      >
+        <div>
+          <h3><span class="pill macro">Macro Tasks</span> 宏任务来源</h3>
+          <ul
+            style="
+              font-size: 0.85rem;
+              color: var(--text);
+              padding-left: 1.25rem;
+              line-height: 2;
+            "
+          >
+            <li>
+              <code style="color: var(--accent3)">setTimeout</code> /
+              <code style="color: var(--accent3)">setInterval</code>
+            </li>
+            <li>I/O 操作完成回调</li>
+            <li>UI 渲染事件</li>
+            <li>
+              <code style="color: var(--accent3)">requestAnimationFrame</code>
+            </li>
+            <li>用户交互事件（click、keydown 等）</li>
+            <li><code style="color: var(--accent3)">MessageChannel</code></li>
+          </ul>
+        </div>
+        <div>
+          <h3><span class="pill micro">Micro Tasks</span> 微任务来源</h3>
+          <ul
+            style="
+              font-size: 0.85rem;
+              color: var(--text);
+              padding-left: 1.25rem;
+              line-height: 2;
+            "
+          >
+            <li>
+              <code style="color: #a78bfa">Promise.then</code> /
+              <code style="color: #a78bfa">.catch</code> /
+              <code style="color: #a78bfa">.finally</code>
+            </li>
+            <li><code style="color: #a78bfa">queueMicrotask()</code></li>
+            <li><code style="color: #a78bfa">MutationObserver</code> 回调</li>
+            <li>
+              <code style="color: #a78bfa">async/await</code>（await 后的代码）
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>浏览器渲染时机</h3>
+      <p>
+        浏览器在每次宏任务之间（微任务队列清空后），可能进行一次
+        <strong>UI 渲染</strong>（16ms/帧），这是
+        <code>requestAnimationFrame</code> 和
+        <code>MutationObserver</code> 的执行节点。
+      </p>
+
+      <div class="loop-diagram-wrap">
+        <svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker
+              id="barr1"
+              markerWidth="7"
+              markerHeight="7"
+              refX="5"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L7,3 z" fill="#2563eb" />
+            </marker>
+            <marker
+              id="barr2"
+              markerWidth="7"
+              markerHeight="7"
+              refX="5"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L7,3 z" fill="#7c3aed" />
+            </marker>
+            <marker
+              id="barr3"
+              markerWidth="7"
+              markerHeight="7"
+              refX="5"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L7,3 z" fill="#10b981" />
+            </marker>
+            <marker
+              id="barr4"
+              markerWidth="7"
+              markerHeight="7"
+              refX="5"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L0,6 L7,3 z" fill="#f59e0b" />
+            </marker>
+          </defs>
+
+          <!-- Center -->
+          <text
+            x="240"
+            y="155"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#4a5568"
+            letter-spacing="1.5"
+          >
+            BROWSER
+          </text>
+          <text
+            x="240"
+            y="170"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#4a5568"
+            letter-spacing="1.5"
+          >
+            EVENT LOOP
+          </text>
+          <circle
+            cx="240"
+            cy="161"
+            r="38"
+            fill="none"
+            stroke="#1f2533"
+            stroke-width="1"
+            stroke-dasharray="3 3"
+          />
+
+          <!-- Nodes: top=宏任务, right=微任务, bottom=UI渲染, left=下一个宏任务 -->
+          <!-- Node 1 top: 宏任务执行 (240, 28) -->
+          <rect
+            x="164"
+            y="10"
+            width="152"
+            height="44"
+            rx="9"
+            fill="#1e3a5f"
+            stroke="#2563eb"
+            stroke-width="1.5"
+          />
+          <text
+            x="240"
+            y="29"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="9.5"
+            font-weight="700"
+            fill="#60a5fa"
+          >
+            宏任务执行
+          </text>
+          <text
+            x="240"
+            y="45"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#3b82f6"
+          >
+            Macrotask
+          </text>
+
+          <!-- Node 2 right: 全部微任务 (390, 161) -->
+          <rect
+            x="348"
+            y="138"
+            width="126"
+            height="44"
+            rx="9"
+            fill="#1a0f3d"
+            stroke="#7c3aed"
+            stroke-width="1.5"
+          />
+          <text
+            x="411"
+            y="156"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="9.5"
+            font-weight="700"
+            fill="#a78bfa"
+          >
+            全部微任务
+          </text>
+          <text
+            x="411"
+            y="172"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#7c3aed"
+          >
+            Microtask
+          </text>
+
+          <!-- Node 3 bottom: UI 渲染 (240, 278) -->
+          <rect
+            x="164"
+            y="262"
+            width="152"
+            height="44"
+            rx="9"
+            fill="rgba(16,185,129,0.08)"
+            stroke="#10b981"
+            stroke-width="1.5"
+          />
+          <text
+            x="240"
+            y="281"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="9.5"
+            font-weight="700"
+            fill="#10b981"
+          >
+            UI 渲染
+          </text>
+          <text
+            x="240"
+            y="297"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#059669"
+          >
+            可选 · 16ms/帧
+          </text>
+
+          <!-- Node 4 left: 下一个宏任务 (90, 161) -->
+          <rect
+            x="6"
+            y="138"
+            width="126"
+            height="44"
+            rx="9"
+            fill="#3d1f00"
+            stroke="#f59e0b"
+            stroke-width="1.5"
+          />
+          <text
+            x="69"
+            y="156"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="9.5"
+            font-weight="700"
+            fill="#fcd34d"
+          >
+            下一个宏任务
+          </text>
+          <text
+            x="69"
+            y="172"
+            text-anchor="middle"
+            font-family="JetBrains Mono,monospace"
+            font-size="8"
+            fill="#f59e0b"
+          >
+            Next Macro
+          </text>
+
+          <!-- Arrow 1→2: top-right curved -->
+          <path
+            d="M 316,38 Q 400,60 400,138"
+            fill="none"
+            stroke="#2563eb"
+            stroke-width="1.6"
+            marker-end="url(#barr1)"
+            opacity="0.8"
+          />
+          <!-- Arrow 2→3: right-bottom curved -->
+          <path
+            d="M 400,182 Q 400,250 316,275"
+            fill="none"
+            stroke="#7c3aed"
+            stroke-width="1.6"
+            marker-end="url(#barr2)"
+            opacity="0.8"
+          />
+          <!-- Arrow 3→4: bottom-left curved -->
+          <path
+            d="M 164,282 Q 80,262 80,182"
+            fill="none"
+            stroke="#10b981"
+            stroke-width="1.6"
+            marker-end="url(#barr3)"
+            opacity="0.8"
+          />
+          <!-- Arrow 4→1: left-top curved -->
+          <path
+            d="M 80,138 Q 80,60 164,36"
+            fill="none"
+            stroke="#f59e0b"
+            stroke-width="1.6"
+            marker-end="url(#barr4)"
+            opacity="0.8"
+          />
+
+          <!-- Step labels -->
+          <text
+            x="372"
+            y="96"
+            font-family="JetBrains Mono,monospace"
+            font-size="7.5"
+            fill="#2563eb"
+            opacity="0.9"
+            text-anchor="middle"
+          >
+            ① 栈空
+          </text>
+          <text
+            x="372"
+            y="232"
+            font-family="JetBrains Mono,monospace"
+            font-size="7.5"
+            fill="#7c3aed"
+            opacity="0.9"
+            text-anchor="middle"
+          >
+            ② 微任务清空
+          </text>
+          <text
+            x="106"
+            y="234"
+            font-family="JetBrains Mono,monospace"
+            font-size="7.5"
+            fill="#10b981"
+            opacity="0.9"
+            text-anchor="middle"
+          >
+            ③ 可能渲染
+          </text>
+          <text
+            x="106"
+            y="96"
+            font-family="JetBrains Mono,monospace"
+            font-size="7.5"
+            fill="#f59e0b"
+            opacity="0.9"
+            text-anchor="middle"
+          >
+            ④ 循环
+          </text>
+        </svg>
+      </div>
+
+      <h3>经典代码解析</h3>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this, 'browser-t1')">
+          async/await
+        </div>
+        <div class="tab" onclick="switchTab(this, 'browser-t2')">
+          Promise.resolve
+        </div>
+      </div>
+      <div class="tab-body active" id="browser-t1">
+        <pre><span class="cm">// async/await 底层是 Promise，await 后的代码是微任务</span>
+<span class="kw">async function</span> <span class="fn">foo</span>() {
+  console.<span class="fn">log</span>(<span class="str">'foo start'</span>);           <span class="cm">// 1</span>
+  <span class="kw">await</span> Promise.<span class="fn">resolve</span>();
+  console.<span class="fn">log</span>(<span class="str">'foo end'</span>);             <span class="cm">// 3（微任务）</span>
+}
+
+console.<span class="fn">log</span>(<span class="str">'script start'</span>);          <span class="cm">// 0</span>
+<span class="fn">foo</span>();
+console.<span class="fn">log</span>(<span class="str">'script end'</span>);            <span class="cm">// 2</span>
+
+<span class="cm">// 输出: script start → foo start → script end → foo end</span></pre>
+        <div class="highlight-box info" style="margin-top: 0.75rem">
+          <span class="icon">🔍</span>
+          <div>
+            <strong>await</strong> 相当于
+            <code>Promise.then</code> 的语法糖。<code
+              >await Promise.resolve()</code
+            >
+            会将后续代码包入微任务队列，当前同步栈执行完后才执行。
+          </div>
+        </div>
+      </div>
+      <div class="tab-body" id="browser-t2">
+        <pre><span class="cm">// Promise.resolve 是已 settled 的 Promise，.then 直接入微任务队列</span>
+console.<span class="fn">log</span>(<span class="str">'1'</span>);
+
+<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'2'</span>), <span class="num">0</span>);
+
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">'3'</span>);
+  <span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'4'</span>), <span class="num">0</span>);
+});
+
+console.<span class="fn">log</span>(<span class="str">'5'</span>);
+
+<span class="cm">// 输出: 1 → 5 → 3 → 2 → 4</span></pre>
+        <div class="highlight-box warn" style="margin-top: 0.75rem">
+          <span class="icon">⚠️</span>
+          <div>
+            微任务中产生的宏任务（<code>setTimeout</code>）会进入下一轮循环，在已有的
+            <code>setTimeout('2')</code> 之后执行。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ══════════ NODE ══════════ -->
+    <section id="node">
+      <div class="section-label">// Chapter 03</div>
+      <h2>Node.js 事件循环</h2>
+      <p>
+        Node.js 基于 <strong>libuv</strong> 库，事件循环比浏览器更复杂，分为 6
+        个阶段，每个阶段处理特定类型的任务。
+      </p>
+
+      <div class="highlight-box warn">
+        <span class="icon">⚠️</span>
+        <div>
+          <strong>Node.js 独有：</strong
+          ><code>process.nextTick</code> 的优先级高于
+          <code>Promise.then</code>！二者都在阶段切换前清空，但
+          <code>nextTick</code> 队列先于微任务队列。
+        </div>
+      </div>
+
+      <h3>六个阶段（点击查看详情）</h3>
+
+      <div class="node-phases" id="nodePhases">
+        <div class="phase active" onclick="showPhase(0)">
+          <div class="phase-num">Phase 1</div>
+          <div class="phase-name">Timers</div>
+          <div class="phase-desc">定时器</div>
+        </div>
+        <div class="phase" onclick="showPhase(1)">
+          <div class="phase-num">Phase 2</div>
+          <div class="phase-name">Pending<br />Callbacks</div>
+          <div class="phase-desc">I/O 错误</div>
+        </div>
+        <div class="phase" onclick="showPhase(2)">
+          <div class="phase-num">Phase 3</div>
+          <div class="phase-name">Idle/<br />Prepare</div>
+          <div class="phase-desc">内部</div>
+        </div>
+        <div class="phase" onclick="showPhase(3)">
+          <div class="phase-num">Phase 4</div>
+          <div class="phase-name">Poll</div>
+          <div class="phase-desc">I/O 事件</div>
+        </div>
+        <div class="phase" onclick="showPhase(4)">
+          <div class="phase-num">Phase 5</div>
+          <div class="phase-name">Check</div>
+          <div class="phase-desc">setImmediate</div>
+        </div>
+        <div class="phase" onclick="showPhase(5)">
+          <div class="phase-num">Phase 6</div>
+          <div class="phase-name">Close<br />Callbacks</div>
+          <div class="phase-desc">关闭事件</div>
+        </div>
+      </div>
+
+      <div class="phase-detail show" id="phaseDetail"></div>
+
+      <h3 style="margin-top: 2rem">process.nextTick vs Promise.then</h3>
+      <pre><span class="cm">// Node.js 特有优先级顺序</span>
+<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'setTimeout'</span>), <span class="num">0</span>);
+<span class="fn">setImmediate</span>(() => console.<span class="fn">log</span>(<span class="str">'setImmediate'</span>));
+
+process.<span class="fn">nextTick</span>(() => console.<span class="fn">log</span>(<span class="str">'nextTick'</span>));
+
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'Promise'</span>));
+
+<span class="cm">// 输出（I/O 内部）: nextTick → Promise → setImmediate</span>
+<span class="cm">// setTimeout vs setImmediate 顺序在顶层是不确定的！</span></pre>
+
+      <div class="highlight-box success">
+        <span class="icon">✅</span>
+        <div>
+          <strong>Node.js 微任务清空顺序（每个阶段切换前）：</strong><br />
+          <code>process.nextTick 队列</code> →
+          <code>Promise 微任务队列</code>（v11+ 后 Promise
+          也可在阶段内立即执行）
+        </div>
+      </div>
+
+      <h3>setImmediate vs setTimeout(fn, 0)</h3>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          margin-top: 0.75rem;
+        "
+      >
+        <div class="card">
+          <div class="pill macro">setTimeout(fn, 0)</div>
+          <p
+            style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--muted)"
+          >
+            进入 Timers 阶段，实际最小延迟 ~1ms，顶层调用时与 setImmediate
+            顺序不确定。
+          </p>
+        </div>
+        <div class="card" style="border-color: var(--green)">
+          <div
+            class="pill"
+            style="
+              background: rgba(16, 185, 129, 0.1);
+              color: var(--green);
+              border: 1px solid var(--green);
+            "
+          >
+            setImmediate
+          </div>
+          <p
+            style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--muted)"
+          >
+            进入 Check 阶段。在 I/O 回调中调用时，<strong>永远先于</strong>
+            setTimeout 执行。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ══════════ DIFF ══════════ -->
+    <section id="diff">
+      <div class="section-label">// Chapter 04</div>
+      <h2>浏览器 vs Node.js 差异对比</h2>
+
+      <table class="diff-table">
+        <tr>
+          <th class="label">特性</th>
+          <th class="browser-col">🌐 浏览器</th>
+          <th class="node-col">🟢 Node.js</th>
+        </tr>
+        <tr>
+          <td class="label">事件循环模型</td>
+          <td>HTML 规范定义，浏览器实现</td>
+          <td>libuv 实现，6 个明确阶段</td>
+        </tr>
+        <tr>
+          <td class="label">宏任务类型</td>
+          <td>setTimeout、setInterval、I/O、UI 事件、MessageChannel</td>
+          <td>setTimeout、setInterval、setImmediate、I/O</td>
+        </tr>
+        <tr>
+          <td class="label">微任务优先级</td>
+          <td>Promise.then = queueMicrotask（同级）</td>
+          <td>process.nextTick &gt; Promise.then</td>
+        </tr>
+        <tr>
+          <td class="label">setImmediate</td>
+          <td>❌ 不支持</td>
+          <td>✅ Check 阶段执行</td>
+        </tr>
+        <tr>
+          <td class="label">process.nextTick</td>
+          <td>❌ 不支持</td>
+          <td>✅ 阶段切换前最先执行</td>
+        </tr>
+        <tr>
+          <td class="label">requestAnimationFrame</td>
+          <td>✅ 每帧渲染前执行</td>
+          <td>❌ 不支持</td>
+        </tr>
+        <tr>
+          <td class="label">MutationObserver</td>
+          <td>✅ 微任务</td>
+          <td>❌ 无 DOM</td>
+        </tr>
+        <tr>
+          <td class="label">微任务执行时机</td>
+          <td>每个宏任务执行完后清空</td>
+          <td>v11+ 每个阶段任务完成后清空（与浏览器一致）</td>
+        </tr>
+        <tr>
+          <td class="label">setTimeout(0) 最小延迟</td>
+          <td>~4ms（规范限制嵌套&gt;5层）</td>
+          <td>~1ms</td>
+        </tr>
+      </table>
+
+      <h3>⚠️ Node.js v10 vs v11+ 的重要变化</h3>
+      <pre><span class="cm">// 在 Node.js v10 及之前：</span>
+<span class="fn">setTimeout</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">'timer1'</span>);
+  Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'promise1'</span>));
+}, <span class="num">0</span>);
+
+<span class="fn">setTimeout</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">'timer2'</span>);
+  Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'promise2'</span>));
+}, <span class="num">0</span>);
+
+<span class="cm">// v10: timer1 → timer2 → promise1 → promise2（两个 timer 都执行完才清微任务）</span>
+<span class="cm">// v11+: timer1 → promise1 → timer2 → promise2（每个 timer 后立即清微任务）</span></pre>
+
+      <div class="highlight-box warn">
+        <span class="icon">🚨</span>
+        <div>
+          <strong>现代 Node.js（v11+）的行为已与浏览器对齐：</strong
+          >每执行完一个宏任务，立即清空微任务队列，而不是等当前阶段所有任务执行完。
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ══════════ QUIZ ══════════ -->
+    <section id="quiz">
+      <div class="section-label">// Chapter 05</div>
+      <h2>代码输出题 — 检验学习成果</h2>
+      <p>请在心中推导输出结果，再点击选项验证。答对题目可获得积分！</p>
+
+      <div
+        style="
+          display: flex;
+          gap: 0.75rem;
+          margin-bottom: 1.5rem;
+          align-items: center;
+          flex-wrap: wrap;
+        "
+      >
+        <div
+          style="
+            font-family: &quot;JetBrains Mono&quot;, monospace;
+            font-size: 0.8rem;
+          "
+        >
+          得分：<span
+            id="scoreDisplay"
+            style="color: var(--accent); font-weight: 700"
+            >0</span
+          >
+          / <span id="totalDisplay">0</span>
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="resetQuiz()">
+          ↺ 重置答题
+        </button>
+      </div>
+
+      <div class="quiz-container" id="quizContainer"></div>
+
+      <div class="quiz-score" id="finalScore">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem">🎉</div>
+        <div class="score-num" id="finalNum"></div>
+        <div class="score-msg" id="finalMsg"></div>
+        <button
+          class="btn btn-primary"
+          style="margin-top: 1.5rem"
+          onclick="resetQuiz()"
+        >
+          再来一次
+        </button>
+      </div>
+    </section>
+
+    <footer>
+      <p>JavaScript Event Loop Interactive Tutorial · Built with ❤️</p>
+      <p style="margin-top: 0.25rem">
+        涵盖 ECMAScript 规范 · HTML Living Standard · Node.js v18+
+      </p>
+    </footer>
+
+    <script>
+      // ── THEME ──
+      const knob = document.getElementById("themeKnob");
+      function applyTheme(light) {
+        document.documentElement.classList.toggle("light", light);
+        knob.textContent = light ? "☀️" : "🌙";
+      }
+      function toggleTheme() {
+        const isLight = !document.documentElement.classList.contains("light");
+        applyTheme(isLight);
+        try {
+          localStorage.setItem("el-theme", isLight ? "light" : "dark");
+        } catch (e) {}
+      }
+      // Restore saved preference
+      try {
+        const saved = localStorage.getItem("el-theme");
+        if (saved === "light") applyTheme(true);
+      } catch (e) {}
+
+      // ── NAV HIGHLIGHT + FIXED PROGRESS ──
+      const navLinks = document.querySelectorAll("nav a");
+      const sections = document.querySelectorAll("section[id]");
+      const progressFill = document.getElementById("globalProgress");
+      const progressLabel = document.getElementById("progressLabel");
+      let labelTimer = null;
+
+      window.addEventListener("scroll", () => {
+        let cur = "";
+        sections.forEach((s) => {
+          if (window.scrollY >= s.offsetTop - 80) cur = s.id;
+        });
+        navLinks.forEach((a) => {
+          a.classList.toggle("active", a.getAttribute("href") === "#" + cur);
+        });
+
+        // Fixed progress bar
+        const p = Math.min(
+          100,
+          Math.round(
+            (window.scrollY /
+              (document.body.scrollHeight - window.innerHeight)) *
+              100,
+          ),
+        );
+        progressFill.style.width = p + "%";
+        progressLabel.textContent = p + "%";
+        progressLabel.classList.add("visible");
+        clearTimeout(labelTimer);
+        labelTimer = setTimeout(
+          () => progressLabel.classList.remove("visible"),
+          1200,
+        );
+      });
+
+      // ── TAB SWITCH ──
+      function switchTab(el, id) {
+        const parent = el.closest(".tabs");
+        parent
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        el.classList.add("active");
+        const section = el.closest("section") || document;
+        section
+          .querySelectorAll(".tab-body")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+      }
+
+      // ── NODE PHASES ──
+      const phaseData = [
+        {
+          name: "Timers",
+          color: "#f59e0b",
+          desc: "执行 <code>setTimeout</code> 和 <code>setInterval</code> 到期的回调。libuv 检查计时器堆，运行所有已到期的计时器回调。",
+          note: "注意：计时器回调在 <strong>到期后</strong> 才执行，不保证精确时间，只保证不早于设定延迟。",
+          api: "setTimeout、setInterval",
+        },
+        {
+          name: "Pending Callbacks",
+          color: "#60a5fa",
+          desc: "执行上一轮循环被推迟的 I/O 回调（如 TCP 错误报告）。大多数情况下该队列为空。",
+          note: "一些系统级错误回调（如 ECONNREFUSED）会在此阶段处理。",
+          api: "系统级 I/O 错误回调",
+        },
+        {
+          name: "Idle / Prepare",
+          color: "#94a3b8",
+          desc: "libuv 内部使用阶段，开发者通常不需要关心。用于内部维护工作。",
+          note: "此阶段对外不暴露 API，不可直接操控。",
+          api: "内部使用",
+        },
+        {
+          name: "Poll",
+          color: "#10b981",
+          desc: "<strong>最重要的阶段。</strong>检索新的 I/O 事件，执行 I/O 相关回调（除了 close、timer、setImmediate）。",
+          note: "Poll 阶段可能阻塞等待 I/O。如果 check 阶段有 setImmediate 且 poll 队列空，会直接进入 check；否则等待新 I/O 事件（有超时限制）。",
+          api: "fs.readFile、net.connect 等 I/O 回调",
+        },
+        {
+          name: "Check",
+          color: "#a78bfa",
+          desc: "执行 <code>setImmediate</code> 的回调。这是 Node.js 独有的 API，允许在 poll 阶段后立即执行代码。",
+          note: "在 I/O 回调中，setImmediate 永远先于 setTimeout(0) 执行！",
+          api: "setImmediate",
+        },
+        {
+          name: "Close Callbacks",
+          color: "#f87171",
+          desc: "执行关闭事件的回调，如 <code>socket.on('close')</code>。如果 socket 被突然关闭，close 事件在此阶段触发。",
+          note: "如果没有更多任务，事件循环结束，Node.js 进程退出。",
+          api: 'socket.on("close"), process.exit()',
+        },
+      ];
+
+      function showPhase(idx) {
+        document
+          .querySelectorAll(".phase")
+          .forEach((p, i) => p.classList.toggle("active", i === idx));
+        const d = phaseData[idx];
+        const el = document.getElementById("phaseDetail");
+        el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;padding:0.2em 0.6em;border-radius:4px;background:${d.color}22;color:${d.color};border:1px solid ${d.color}">${d.api}</span>
+      <strong style="color:#fff;font-size:0.95rem">${d.name}</strong>
+    </div>
+    <p style="font-size:0.85rem;color:var(--text)">${d.desc}</p>
+    <div style="margin-top:0.75rem;padding:0.75rem;background:var(--surface2);border-radius:8px;font-size:0.82rem;color:var(--accent3)">
+      💡 ${d.note}
+    </div>`;
+        el.classList.add("show");
+      }
+      showPhase(0);
+
+      // ── VISUALIZER ──
+      const demos = [
+        {
+          label: "示例 1：基础 Promise + setTimeout",
+          code: `<span class="cm">// 分析：同步 → 微任务 → 宏任务</span>
+console.<span class="fn">log</span>(<span class="str">'start'</span>);
+
+<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'timeout'</span>), <span class="num">0</span>);
+
+Promise.<span class="fn">resolve</span>()
+  .<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'promise'</span>));
+
+console.<span class="fn">log</span>(<span class="str">'end'</span>);`,
+          steps: [
+            {
+              desc: '执行同步：console.log("start")',
+              stack: ["main()"],
+              micro: [],
+              macro: [],
+              log: "start",
+            },
+            {
+              desc: "setTimeout 注册定时器",
+              stack: ["main()"],
+              micro: [],
+              macro: ['cb: log("timeout")'],
+              log: null,
+            },
+            {
+              desc: "Promise.resolve().then 注册微任务",
+              stack: ["main()"],
+              micro: ['then: log("promise")'],
+              macro: ['cb: log("timeout")'],
+              log: null,
+            },
+            {
+              desc: '执行同步：console.log("end")',
+              stack: ["main()"],
+              micro: ['then: log("promise")'],
+              macro: ['cb: log("timeout")'],
+              log: "end",
+            },
+            {
+              desc: "同步代码执行完，main() 出栈",
+              stack: [],
+              micro: ['then: log("promise")'],
+              macro: ['cb: log("timeout")'],
+              log: null,
+            },
+            {
+              desc: '调用栈空 → 取微任务 log("promise")',
+              stack: ["then callback"],
+              micro: [],
+              macro: ['cb: log("timeout")'],
+              log: "promise",
+            },
+            {
+              desc: '微任务队列清空，取宏任务 log("timeout")',
+              stack: ["setTimeout cb"],
+              micro: [],
+              macro: [],
+              log: "timeout",
+            },
+            { desc: "完成！", stack: [], micro: [], macro: [], log: null },
+          ],
+        },
+        {
+          label: "示例 2：Promise 链式调用",
+          code: `<span class="cm">// Promise 链中每个 .then 都是新微任务</span>
+console.<span class="fn">log</span>(<span class="str">'1'</span>);
+
+Promise.<span class="fn">resolve</span>()
+  .<span class="fn">then</span>(() => {
+    console.<span class="fn">log</span>(<span class="str">'2'</span>);
+    <span class="kw">return</span> <span class="str">'value'</span>;
+  })
+  .<span class="fn">then</span>((v) => console.<span class="fn">log</span>(<span class="str">'3'</span>));
+
+console.<span class="fn">log</span>(<span class="str">'4'</span>);`,
+          steps: [
+            {
+              desc: '执行 console.log("1")',
+              stack: ["main()"],
+              micro: [],
+              macro: [],
+              log: "1",
+            },
+            {
+              desc: "Promise.resolve() 已 settled，第一个 .then 入微任务队列",
+              stack: ["main()"],
+              micro: ['then1: log("2")'],
+              macro: [],
+              log: null,
+            },
+            {
+              desc: '执行 console.log("4")',
+              stack: ["main()"],
+              micro: ['then1: log("2")'],
+              macro: [],
+              log: "4",
+            },
+            {
+              desc: "同步结束，main() 出栈，开始处理微任务",
+              stack: [],
+              micro: ['then1: log("2")'],
+              macro: [],
+              log: null,
+            },
+            {
+              desc: '执行 then1：log("2")，返回 "value"，then2 入微任务',
+              stack: ["then1"],
+              micro: ['then2: log("3")'],
+              macro: [],
+              log: "2",
+            },
+            {
+              desc: '执行 then2：log("3")',
+              stack: ["then2"],
+              micro: [],
+              macro: [],
+              log: "3",
+            },
+            { desc: "完成！", stack: [], micro: [], macro: [], log: null },
+          ],
+        },
+        {
+          label: "示例 3：微任务嵌套",
+          code: `<span class="cm">// 微任务内产生的新微任务会立即排队</span>
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">'micro 1'</span>);
+  Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => {
+    console.<span class="fn">log</span>(<span class="str">'micro 2'</span>);
+  });
+});
+
+<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'macro'</span>), <span class="num">0</span>);`,
+          steps: [
+            {
+              desc: "注册 then 微任务 和 setTimeout 宏任务",
+              stack: ["main()"],
+              micro: ['outer-then: log("micro 1")'],
+              macro: ['cb: log("macro")'],
+              log: null,
+            },
+            {
+              desc: "同步结束，开始处理微任务",
+              stack: [],
+              micro: ['outer-then: log("micro 1")'],
+              macro: ['cb: log("macro")'],
+              log: null,
+            },
+            {
+              desc: '执行 outer-then：log("micro 1")，产生新微任务',
+              stack: ["outer-then"],
+              micro: ['inner-then: log("micro 2")'],
+              macro: ['cb: log("macro")'],
+              log: "micro 1",
+            },
+            {
+              desc: "新微任务 inner-then 立即入队，继续清空微任务",
+              stack: ["inner-then"],
+              micro: [],
+              macro: ['cb: log("macro")'],
+              log: "micro 2",
+            },
+            {
+              desc: '微任务队列清空，取宏任务 log("macro")',
+              stack: ["setTimeout cb"],
+              micro: [],
+              macro: [],
+              log: "macro",
+            },
+            { desc: "完成！", stack: [], micro: [], macro: [], log: null },
+          ],
+        },
+      ];
+
+      let currentDemo = 0,
+        currentStep = 0,
+        autoTimer = null;
+
+      function loadDemo() {
+        currentDemo = parseInt(document.getElementById("demoSelect").value);
+        resetDemo();
+      }
+
+      function resetDemo() {
+        clearTimeout(autoTimer);
+        currentStep = 0;
+        document.getElementById("demoCode").innerHTML = demos[currentDemo].code;
+        clearViz();
+        document.getElementById("vizLog").innerHTML =
+          '<div style="color:var(--muted)">// 点击运行查看输出...</div>';
+        document.getElementById("stepHint").textContent = "";
+        document.getElementById("btnStep").disabled = false;
+      }
+
+      function clearViz() {
+        ["stackItems", "microItems", "macroItems"].forEach(
+          (id) => (document.getElementById(id).innerHTML = ""),
+        );
+      }
+
+      function renderItems(id, items, cls) {
+        const el = document.getElementById(id);
+        el.innerHTML = "";
+        items.forEach((item, i) => {
+          const div = document.createElement("div");
+          div.className = `viz-item ${cls}-item`;
+          div.textContent = item;
+          el.appendChild(div);
+          setTimeout(() => div.classList.add("show"), 20 * i);
+        });
+      }
+
+      function addLog(text) {
+        const log = document.getElementById("vizLog");
+        if (log.querySelector('[style*="muted"]')) log.innerHTML = "";
+        const line = document.createElement("div");
+        line.className = "log-line";
+        line.innerHTML = `<span>▶</span> ${text}`;
+        log.appendChild(line);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function stepExec() {
+        const steps = demos[currentDemo].steps;
+        if (currentStep >= steps.length) {
+          document.getElementById("btnStep").disabled = true;
+          return;
+        }
+        const s = steps[currentStep];
+        document.getElementById("stepHint").textContent = s.desc;
+        renderItems("stackItems", s.stack, "stack");
+        renderItems("microItems", s.micro, "micro");
+        renderItems("macroItems", s.macro, "macro");
+        if (s.log) addLog(s.log);
+        currentStep++;
+        if (currentStep >= steps.length)
+          document.getElementById("btnStep").textContent = "✓ 已完成";
+      }
+
+      function autoRun() {
+        resetDemo();
+        let i = 0;
+        function next() {
+          if (i < demos[currentDemo].steps.length) {
+            stepExec();
+            i++;
+            autoTimer = setTimeout(next, 900);
+          }
+        }
+        next();
+      }
+
+      loadDemo();
+
+      // ── QUIZ DATA ──
+      const quizData = [
+        {
+          level: "classic",
+          question: "以下代码在浏览器中的输出顺序是？",
+          code: `<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'A'</span>), <span class="num">0</span>);
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'B'</span>));
+console.<span class="fn">log</span>(<span class="str">'C'</span>);`,
+          options: ["C → A → B", "C → B → A", "A → B → C", "B → C → A"],
+          answer: 1,
+          explain: `<strong>输出：C → B → A</strong><br><br>
+1. <code>console.log('C')</code> 是同步代码，立即执行<br>
+2. Promise.then 进入<span style="color:#a78bfa">微任务队列</span>，setTimeout 进入<span style="color:#fcd34d">宏任务队列</span><br>
+3. 同步代码执行完，清空微任务队列 → 执行 <code>'B'</code><br>
+4. 最后执行宏任务 → 输出 <code>'A'</code>`,
+        },
+        {
+          level: "classic",
+          question: "以下代码输出什么？",
+          code: `console.<span class="fn">log</span>(<span class="str">'1'</span>);
+
+<span class="fn">setTimeout</span>(<span class="kw">function</span>() {
+  console.<span class="fn">log</span>(<span class="str">'2'</span>);
+  Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'3'</span>));
+}, <span class="num">0</span>);
+
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(<span class="kw">function</span>() {
+  console.<span class="fn">log</span>(<span class="str">'4'</span>);
+  <span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'5'</span>), <span class="num">0</span>);
+});
+
+console.<span class="fn">log</span>(<span class="str">'6'</span>);`,
+          options: ["1 6 4 2 3 5", "1 6 2 4 3 5", "1 2 4 6 3 5", "1 6 4 2 5 3"],
+          answer: 0,
+          explain: `<strong>输出：1 → 6 → 4 → 2 → 3 → 5</strong><br><br>
+1. 同步：<code>1</code>、注册 setTimeout(A)、注册 then(B)、<code>6</code><br>
+2. 微任务 B 执行 → <code>4</code>，注册 setTimeout(C)<br>
+3. 微任务队列清空，宏任务队列：[A, C]<br>
+4. 宏任务 A → <code>2</code>，注册 then(D)，立即清微任务 D → <code>3</code><br>
+5. 宏任务 C → <code>5</code>`,
+        },
+        {
+          level: "classic",
+          question: "async/await 版本，输出顺序是？",
+          code: `<span class="kw">async function</span> <span class="fn">async1</span>() {
+  console.<span class="fn">log</span>(<span class="str">'async1 start'</span>);
+  <span class="kw">await</span> <span class="fn">async2</span>();
+  console.<span class="fn">log</span>(<span class="str">'async1 end'</span>);
+}
+
+<span class="kw">async function</span> <span class="fn">async2</span>() {
+  console.<span class="fn">log</span>(<span class="str">'async2'</span>);
+}
+
+console.<span class="fn">log</span>(<span class="str">'start'</span>);
+<span class="fn">async1</span>();
+console.<span class="fn">log</span>(<span class="str">'end'</span>);`,
+          options: [
+            "start → async1 start → async2 → async1 end → end",
+            "start → async1 start → async2 → end → async1 end",
+            "start → end → async1 start → async2 → async1 end",
+            "async1 start → start → async2 → end → async1 end",
+          ],
+          answer: 1,
+          explain: `<strong>输出：start → async1 start → async2 → end → async1 end</strong><br><br>
+1. <code>start</code>（同步）<br>
+2. 调用 async1()：打印 <code>async1 start</code>（同步），调用 async2()<br>
+3. async2() 打印 <code>async2</code>（同步，async 函数体同步执行到 return）<br>
+4. <code>await async2()</code> 将后续代码 <code>async1 end</code> 加入微任务队列<br>
+5. 返回主线程，打印 <code>end</code>（同步）<br>
+6. 同步结束，清微任务 → <code>async1 end</code>`,
+        },
+        {
+          level: "advanced",
+          question: "以下代码在 Node.js (v18+) 中的输出是？",
+          code: `<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="str">'timeout'</span>), <span class="num">0</span>);
+<span class="fn">setImmediate</span>(() => console.<span class="fn">log</span>(<span class="str">'immediate'</span>));
+
+process.<span class="fn">nextTick</span>(() => console.<span class="fn">log</span>(<span class="str">'nextTick'</span>));
+
+Promise.<span class="fn">resolve</span>().<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'promise'</span>));
+
+<span class="cm">// 这段代码在 I/O 回调外（顶层）执行</span>`,
+          options: [
+            "nextTick → promise → timeout → immediate",
+            "nextTick → promise → immediate → timeout",
+            "promise → nextTick → timeout → immediate",
+            "timeout 和 immediate 顺序不确定，nextTick → promise 最先",
+          ],
+          answer: 3,
+          explain: `<strong>正确答案：D</strong><br><br>
+<code>nextTick → promise</code> 一定最先，因为它们在当前阶段结束后立即清空。<br><br>
+<code>setTimeout(0)</code> vs <code>setImmediate</code>：在<strong>顶层</strong>（非 I/O 回调中）调用时，顺序<strong>不确定</strong>！取决于事件循环启动时间和系统定时器精度。<br><br>
+如果在 <strong>I/O 回调中</strong>调用，<code>setImmediate</code> 永远先于 <code>setTimeout(0)</code>。`,
+        },
+        {
+          level: "advanced",
+          question: "以下代码输出什么？注意 Promise 链的微任务调度",
+          code: `Promise.<span class="fn">resolve</span>()
+  .<span class="fn">then</span>(() => {
+    console.<span class="fn">log</span>(<span class="str">'1'</span>);
+    <span class="kw">return</span> Promise.<span class="fn">resolve</span>(<span class="num">2</span>);
+  })
+  .<span class="fn">then</span>((v) => console.<span class="fn">log</span>(v));
+
+Promise.<span class="fn">resolve</span>()
+  .<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'3'</span>))
+  .<span class="fn">then</span>(() => console.<span class="fn">log</span>(<span class="str">'4'</span>));`,
+          options: [
+            "1 → 2 → 3 → 4",
+            "1 → 3 → 4 → 2",
+            "1 → 3 → 2 → 4",
+            "3 → 1 → 4 → 2",
+          ],
+          answer: 1,
+          explain: `<strong>输出：1 → 3 → 4 → 2</strong>（这是经典陷阱题！）<br><br>
+当 <code>.then</code> 的回调函数 <code>return Promise.resolve(value)</code> 时，会额外产生 <strong>2 个微任务</strong>的延迟（规范要求），导致后续 <code>.then</code> 延迟执行。<br><br>
+<table style="font-size:0.78rem;width:100%">
+<tr><td style="color:var(--muted)">轮次1</td><td>执行 then1-A → 输出 <strong>1</strong>，return Promise.resolve(2)</td></tr>
+<tr><td style="color:var(--muted)">轮次1</td><td>执行 then1-B → 输出 <strong>3</strong></td></tr>
+<tr><td style="color:var(--muted)">轮次2</td><td>处理 Promise.resolve(2) 的 resolve（额外微任务）</td></tr>
+<tr><td style="color:var(--muted)">轮次2</td><td>执行 then2-B → 输出 <strong>4</strong></td></tr>
+<tr><td style="color:var(--muted)">轮次3+</td><td>then2-A 解析完成 → 输出 <strong>2</strong></td></tr>
+</table>`,
+        },
+        {
+          level: "advanced",
+          question: "分析以下 Node.js 代码（v11+），输出是？",
+          code: `<span class="fn">setImmediate</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">'setImmediate'</span>);
+  process.<span class="fn">nextTick</span>(() => console.<span class="fn">log</span>(<span class="str">'nextTick in setImmediate'</span>));
+});
+
+process.<span class="fn">nextTick</span>(() => {
+  console.<span class="fn">log</span>(<span class="str">'nextTick'</span>);
+  <span class="fn">setImmediate</span>(() => console.<span class="fn">log</span>(<span class="str">'setImmediate 2'</span>));
+});`,
+          options: [
+            "nextTick → setImmediate → nextTick in setImmediate → setImmediate 2",
+            "nextTick → setImmediate → setImmediate 2 → nextTick in setImmediate",
+            "setImmediate → nextTick → nextTick in setImmediate → setImmediate 2",
+            "nextTick → setImmediate 2 → setImmediate → nextTick in setImmediate",
+          ],
+          answer: 0,
+          explain: `<strong>输出：nextTick → setImmediate → nextTick in setImmediate → setImmediate 2</strong><br><br>
+1. 顶层代码注册：setImmediate(A)、nextTick(B)<br>
+2. 顶层同步结束，<strong>先清 nextTick 队列</strong>：执行 B → <code>nextTick</code>，注册 setImmediate(C)<br>
+3. 进入 Check 阶段，宏任务队列：[A, C]<br>
+4. 执行 setImmediate A → <code>setImmediate</code>，注册 nextTick(D)<br>
+5. <strong>每个宏任务后立即清 nextTick</strong>：执行 D → <code>nextTick in setImmediate</code><br>
+6. 执行 setImmediate C → <code>setImmediate 2</code>`,
+        },
+        {
+          level: "expert",
+          question: "终极挑战：以下浏览器代码完整输出顺序？",
+          code: `console.<span class="fn">log</span>(<span class="str">'script start'</span>);
+
+<span class="kw">async function</span> <span class="fn">async1</span>() {
+  console.<span class="fn">log</span>(<span class="str">'async1 start'</span>);
+  <span class="kw">await</span> <span class="fn">async2</span>();
+  console.<span class="fn">log</span>(<span class="str">'async1 end'</span>);
+}
+
+<span class="kw">async function</span> <span class="fn">async2</span>() {
+  console.<span class="fn">log</span>(<span class="str">'async2'</span>);
+}
+
+<span class="fn">async1</span>();
+
+<span class="fn">setTimeout</span>(<span class="kw">function</span>() {
+  console.<span class="fn">log</span>(<span class="str">'setTimeout'</span>);
+}, <span class="num">0</span>);
+
+<span class="kw">new</span> <span class="co">Promise</span>(<span class="kw">function</span>(resolve) {
+  console.<span class="fn">log</span>(<span class="str">'promise1'</span>);
+  resolve();
+}).<span class="fn">then</span>(<span class="kw">function</span>() {
+  console.<span class="fn">log</span>(<span class="str">'promise2'</span>);
+});
+
+console.<span class="fn">log</span>(<span class="str">'script end'</span>);`,
+          options: [
+            "script start → async1 start → async2 → promise1 → script end → async1 end → promise2 → setTimeout",
+            "script start → async1 start → async2 → promise1 → script end → promise2 → async1 end → setTimeout",
+            "script start → async1 start → async2 → promise1 → script end → async1 end → promise2 → setTimeout",
+            "script start → async1 start → promise1 → async2 → script end → promise2 → async1 end → setTimeout",
+          ],
+          answer: 1,
+          explain: `<strong>输出：script start → async1 start → async2 → promise1 → script end → promise2 → async1 end → setTimeout</strong><br><br>
+<strong>同步阶段：</strong><br>
+① <code>script start</code> ② async1() 进入：<code>async1 start</code> ③ await async2()：<code>async2</code>，await 将后续包入微任务<br>
+④ new Promise 构造器同步：<code>promise1</code>，resolve() ⑤ <code>script end</code><br><br>
+<strong>微任务清空：</strong><br>
+此时微任务队列：[async1 end 的 continuation, promise2]<br>
+⑥ 先执行 <code>promise2</code>（Promise.then 早注册，async1 的 await 也是微任务但要等 async2 settled 传递）<br>
+<em>注：现代引擎中 await async2() 等价于 Promise.resolve(async2()).then(continuation)，需一轮微任务解包，所以 promise2 先执行。</em><br>
+⑦ <code>async1 end</code><br><br>
+<strong>宏任务：</strong>⑧ <code>setTimeout</code>`,
+        },
+      ];
+
+      let scores = new Array(quizData.length).fill(null);
+      let answered = new Array(quizData.length).fill(false);
+
+      function renderQuiz() {
+        const container = document.getElementById("quizContainer");
+        const levelMap = {
+          classic: ["经典", "badge-classic"],
+          advanced: ["进阶", "badge-advanced"],
+          expert: ["专家", "badge-expert"],
+        };
+        container.innerHTML = quizData
+          .map((q, qi) => {
+            const [lbl, lcls] = levelMap[q.level];
+            return `
+    <div class="quiz-card" id="qcard-${qi}">
+      <div class="quiz-num">
+        <span>题目 ${qi + 1} / ${quizData.length}</span>
+        <span class="quiz-badge ${lcls}">${lbl}</span>
+      </div>
+      <div class="quiz-question">${q.question}</div>
+      <div class="quiz-code"><pre>${q.code}</pre></div>
+      <div class="quiz-options" id="qopts-${qi}">
+        ${q.options
+          .map(
+            (opt, oi) => `
+          <button class="quiz-opt" onclick="answer(${qi},${oi})" id="qopt-${qi}-${oi}">
+            <span style="color:var(--muted);margin-right:0.4em">${["A", "B", "C", "D"][oi]}.</span> ${opt}
+          </button>`,
+          )
+          .join("")}
+      </div>
+      <div class="quiz-reveal" id="qrev-${qi}">
+        <div class="quiz-explain">${q.explain}</div>
+      </div>
+    </div>`;
+          })
+          .join("");
+        updateScore();
+      }
+
+      function answer(qi, oi) {
+        if (answered[qi]) return;
+        answered[qi] = true;
+        const correct = oi === quizData[qi].answer;
+        scores[qi] = correct ? 1 : 0;
+        document
+          .querySelectorAll(`#qopts-${qi} .quiz-opt`)
+          .forEach((btn, i) => {
+            btn.disabled = true;
+            if (i === quizData[qi].answer)
+              btn.classList.add(
+                oi === quizData[qi].answer && oi === i ? "correct" : "reveal",
+              );
+            if (i === oi && !correct) btn.classList.add("wrong");
+            if (i === quizData[qi].answer && !correct)
+              btn.classList.add("reveal");
+          });
+        document.getElementById(`qrev-${qi}`).classList.add("show");
+        updateScore();
+        if (answered.every(Boolean)) showFinal();
+      }
+
+      function updateScore() {
+        const s = scores.filter((v) => v === 1).length;
+        const t = answered.filter(Boolean).length;
+        document.getElementById("scoreDisplay").textContent = s;
+        document.getElementById("totalDisplay").textContent = t;
+      }
+
+      function showFinal() {
+        const s = scores.filter((v) => v === 1).length;
+        const n = quizData.length;
+        const pct = Math.round((s / n) * 100);
+        const msgs = [
+          "继续加油，多练习几遍！💪",
+          "不错！基础已经掌握，进阶题需要深化 🎯",
+          "相当不错！掌握了大部分细节 ⚡",
+          "完美！事件循环专家 🏆",
+        ];
+        const msg =
+          pct < 50
+            ? msgs[0]
+            : pct < 70
+              ? msgs[1]
+              : pct < 90
+                ? msgs[2]
+                : msgs[3];
+        document.getElementById("finalNum").textContent = `${s} / ${n}`;
+        document.getElementById("finalMsg").textContent =
+          `得分率 ${pct}% · ${msg}`;
+        setTimeout(
+          () => document.getElementById("finalScore").classList.add("show"),
+          400,
+        );
+      }
+
+      function resetQuiz() {
+        scores = new Array(quizData.length).fill(null);
+        answered = new Array(quizData.length).fill(false);
+        document.getElementById("finalScore").classList.remove("show");
+        renderQuiz();
+      }
+
+      renderQuiz();
+    </script>
+  </body>
+</html>

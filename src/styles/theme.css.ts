@@ -5,6 +5,7 @@ export const [light, themeVars] = createTheme({
     primary: "#007aff",
 
     text: "#2d3561",
+    text2: "#1a202c",
     textDim: "#7b84a8",
     textBright: "#111630",
 
@@ -22,18 +23,21 @@ export const [light, themeVars] = createTheme({
     orchid: "#c83df5",
     turquoise: "#00b894",
     orange: "#e67e22",
+    grad: "rgba(0, 136, 168, 0.07)",
   },
   space: {
     m: "16px",
   },
 });
 
-
 export const dark = createTheme(themeVars, {
   color: {
     primary: "#0a84ff",
 
     text: "#d8ddf5",
+    text2: "#fff",
+
+
     textDim: "#6b7498",
     textBright: "#f0f3ff",
 
@@ -51,6 +55,8 @@ export const dark = createTheme(themeVars, {
     orchid: "#e86cfa",
     turquoise: "#3df0c2",
     orange: "#f5a623",
+
+    grad: "rgba(0, 194, 212, 0.08)",
   },
   space: {
     m: "16px",
