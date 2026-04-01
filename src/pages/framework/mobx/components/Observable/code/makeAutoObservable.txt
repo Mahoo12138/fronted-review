@@ -1,0 +1,20 @@
+import { makeAutoObservable } from 'mobx';
+
+class CounterStore {
+  count = 0;
+
+  constructor() {
+    // 自动推断：普通属性 → observable
+    //          getter    → computed
+    //          方法      → action
+    makeAutoObservable(this);
+  }
+
+  get doubled() {
+    return this.count * 2;  // 自动成为 computed
+  }
+
+  increment() {
+    this.count++;           // 自动成为 action
+  }
+}

@@ -1,0 +1,19 @@
+import { observable } from 'mobx';
+
+// 对象：深度 observable
+const state = observable({
+  name: 'Alice',
+  profile: { age: 28 }   // 嵌套对象也被代理
+});
+
+// 数组：observable.array
+const list = observable([1, 2, 3]);
+
+// Map / Set
+const map  = observable(new Map());
+const set  = observable(new Set());
+
+// 原始值 (boxed)
+const box  = observable.box(42);
+box.get();       // 读取：42
+box.set(100);    // 写入，触发追踪

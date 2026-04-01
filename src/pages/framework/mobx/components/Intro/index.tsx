@@ -47,6 +47,7 @@ function Intro() {
       description: "Store、Service、Domain Model 自由组合，无中心化约束。",
     },
   ];
+
   return (
     <Section title="概述与设计哲学" number="01" id="introduction">
       <p>
@@ -59,11 +60,11 @@ function Intro() {
           {flows.map((flow, index) => (
             <>
               <div
-                className={`${styles.nodeVariant[flow.label.toLowerCase()]}`}
+                className={`${styles.nodeVariant[(flow.label.toLowerCase() as keyof typeof styles.nodeVariant)]}`}
               >
                 <div className={styles.Flow.icon}>{flow.icon}</div>
                 <div
-                  className={styles.Flow.labelVariant[flow.label.toLowerCase()]}
+                  className={styles.Flow.labelVariant[flow.label.toLowerCase() as keyof typeof styles.Flow.labelVariant]}
                 >
                   {flow.label}
                 </div>

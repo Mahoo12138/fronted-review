@@ -1,0 +1,23 @@
+import { makeObservable, observable, action, computed } from 'mobx';
+
+class TodoStore {
+  todos = [];
+  filter = 'all';
+
+  constructor() {
+    makeObservable(this, {
+      todos:          observable,    // 追踪数组的增删改
+      filter:         observable,    // 追踪字符串变化
+      filteredTodos:  computed,      // 派生，自动缓存
+      addTodo:        action,        // 批量事务更新
+    });
+  }
+
+  get filteredTodos() {
+    return this.todos.filter(t => t.status === this.filter);
+  }
+
+  addTodo(text) {
+    this.todos.push({ text, status: 'active' });
+  }
+}
