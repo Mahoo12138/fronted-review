@@ -1,0 +1,40 @@
+// 简化版核心实现
+class ObservableValue {
+  constructor(value) {
+    this._value = value;
+    this._observers = new Set();  // 订阅该值的 Derivation 集合
+  }
+
+  get() {
+    // 关键！将当前 globalTrackingDerivation 加入订阅者
+    if (globalTrackingDerivation) {
+      this._observers.add(globalTrackingDerivation);
+      globalTrackingDerivation.newObserveds.add(this);
+    }
+    return this._value;
+  }
+
+  set(newValue) {
+    if (newValue === this._value) return;
+    this._value = newValue;
+    // 通知所有 observers 重新计算
+    this._observers.forEach(obs => obs.invalidate());
+  }
+}
+
+// globalTrackingDerivation 是 MobX 全局追踪上下文
+// 在 autorun/computed 运行函数时设置，运行结束后清除
+let globalTrackingDerivation = null;
+
+function trackDerivedFunction(derivation, fn) {
+  const prev = globalTrackingDerivation;
+  globalTrackingDerivation = derivation;
+  derivation.newObserveds = new Set();
+  try {
+    return fn();   // fn 执行期间所有 get() 都会注册依赖
+  } finally {
+    globalTrackingDerivation = prev;
+    // 对比新旧依赖，清理失效的订阅
+    diffAndUpdateDependencies(derivation);
+  }
+}

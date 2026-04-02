@@ -16,8 +16,6 @@ globalStyle("body", {
   lineHeight: 1.5,
   WebkitFontSmoothing: "antialiased",
   textRendering: "optimizeLegibility",
-  background: "var(--background)",
-  color: "var(--foreground)",
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
 });
 

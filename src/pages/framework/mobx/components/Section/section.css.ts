@@ -1,4 +1,4 @@
-import { themeVars } from "@/index.css";
+import { themeVars } from "@/styles/theme.css";
 import { globalStyle, style } from "@vanilla-extract/css";
 
 export const section = style({
@@ -9,6 +9,20 @@ export const section = style({
 globalStyle(`${section} p`, {
   color: themeVars.color.text,
   marginBottom: "14px",
+});
+
+globalStyle(`${section} h3`, {
+  fontSize: "18px",
+  fontWeight: 600,
+  color: themeVars.color.textBright,
+  margin: "28px 0 12px",
+});
+
+globalStyle(`${section} h3::before`, {
+  content: "//  ",
+  color: themeVars.color.textDim,
+  // font-family: var(--mono);
+  fontSize: "14px",
 });
 
 export const header = style({

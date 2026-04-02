@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import React from 'react'
+import * as styles from './virtual-scroll.css'
 
 export const Route = createFileRoute('/demos/virtual-scroll')({
   component: VirtualScrollDemo,
@@ -17,10 +18,10 @@ function VirtualScrollDemo() {
   })
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold tracking-tight">Virtual Scroll</h2>
-        <p className="text-muted-foreground">
+    <div className={styles.page}>
+      <div className={styles.intro}>
+        <h2 className={styles.heading}>Virtual Scroll</h2>
+        <p className={styles.mutedText}>
           Rendering 10,000 items efficiently using @tanstack/react-virtual.
           Only the visible items are rendered in the DOM.
         </p>
@@ -28,7 +29,7 @@ function VirtualScrollDemo() {
 
       <div
         ref={parentRef}
-        className="h-[600px] w-full overflow-auto rounded-md border bg-card shadow-sm"
+        className={styles.listContainer}
       >
         <div
           style={{
@@ -40,16 +41,16 @@ function VirtualScrollDemo() {
           {rowVirtualizer.getVirtualItems().map((virtualItem) => (
             <div
               key={virtualItem.key}
-              className="absolute top-0 left-0 w-full flex items-center px-6 border-b hover:bg-muted/50 transition-colors"
+              className={styles.row}
               style={{
                 height: `${virtualItem.size}px`,
                 transform: `translateY(${virtualItem.start}px)`,
               }}
             >
-              <span className="font-mono text-sm text-muted-foreground w-16">
+              <span className={styles.indexTag}>
                 #{virtualItem.index}
               </span>
-              <span className="font-medium">Item Data Row {virtualItem.index}</span>
+              <span className={styles.rowLabel}>Item Data Row {virtualItem.index}</span>
             </div>
           ))}
         </div>

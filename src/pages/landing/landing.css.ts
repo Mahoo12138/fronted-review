@@ -1,5 +1,5 @@
 import { keyframes, style } from "@vanilla-extract/css";
-import { themeVars } from "@/index.css";
+import { themeVars } from "@/styles/theme.css";
 
 const fadeUp = keyframes({
   from: { opacity: 0, transform: "translateY(24px)" },

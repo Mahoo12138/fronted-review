@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { themeVars } from "@/index.css";
+import { themeVars } from "@/styles/theme.css";
 
 export const light = style({
   background: themeVars.color.surface,

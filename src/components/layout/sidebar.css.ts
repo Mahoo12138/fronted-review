@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { themeVars } from "@/index.css";
+import { themeVars } from "@/styles/theme.css";
 
 // ─── Aside ───────────────────────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ export const nav = style({
   alignItems: "start",
   fontSize: "14px",
   fontWeight: 500,
+  gap: "4px",
 });
 
 export const navPadding = styleVariants({

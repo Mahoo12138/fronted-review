@@ -9,13 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FrameworksMobxRouteImport } from './routes/frameworks/mobx'
 import { Route as DemosVirtualScrollRouteImport } from './routes/demos/virtual-scroll'
 import { Route as DemosResumableUploadRouteImport } from './routes/demos/resumable-upload'
+import { Route as JavascriptEventLoopIndexRouteImport } from './routes/javascript/event-loop/index'
 
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FrameworksMobxRoute = FrameworksMobxRouteImport.update({
+  id: '/frameworks/mobx',
+  path: '/frameworks/mobx',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemosVirtualScrollRoute = DemosVirtualScrollRouteImport.update({
@@ -28,44 +41,95 @@ const DemosResumableUploadRoute = DemosResumableUploadRouteImport.update({
   path: '/demos/resumable-upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JavascriptEventLoopIndexRoute =
+  JavascriptEventLoopIndexRouteImport.update({
+    id: '/javascript/event-loop/',
+    path: '/javascript/event-loop/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/demos/resumable-upload': typeof DemosResumableUploadRoute
   '/demos/virtual-scroll': typeof DemosVirtualScrollRoute
+  '/frameworks/mobx': typeof FrameworksMobxRoute
+  '/javascript/event-loop/': typeof JavascriptEventLoopIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/demos/resumable-upload': typeof DemosResumableUploadRoute
   '/demos/virtual-scroll': typeof DemosVirtualScrollRoute
+  '/frameworks/mobx': typeof FrameworksMobxRoute
+  '/javascript/event-loop': typeof JavascriptEventLoopIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/demos/resumable-upload': typeof DemosResumableUploadRoute
   '/demos/virtual-scroll': typeof DemosVirtualScrollRoute
+  '/frameworks/mobx': typeof FrameworksMobxRoute
+  '/javascript/event-loop/': typeof JavascriptEventLoopIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/demos/resumable-upload' | '/demos/virtual-scroll'
+  fullPaths:
+    | '/'
+    | '/home'
+    | '/demos/resumable-upload'
+    | '/demos/virtual-scroll'
+    | '/frameworks/mobx'
+    | '/javascript/event-loop/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/demos/resumable-upload' | '/demos/virtual-scroll'
-  id: '__root__' | '/' | '/demos/resumable-upload' | '/demos/virtual-scroll'
+  to:
+    | '/'
+    | '/home'
+    | '/demos/resumable-upload'
+    | '/demos/virtual-scroll'
+    | '/frameworks/mobx'
+    | '/javascript/event-loop'
+  id:
+    | '__root__'
+    | '/'
+    | '/home'
+    | '/demos/resumable-upload'
+    | '/demos/virtual-scroll'
+    | '/frameworks/mobx'
+    | '/javascript/event-loop/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HomeRoute: typeof HomeRoute
   DemosResumableUploadRoute: typeof DemosResumableUploadRoute
   DemosVirtualScrollRoute: typeof DemosVirtualScrollRoute
+  FrameworksMobxRoute: typeof FrameworksMobxRoute
+  JavascriptEventLoopIndexRoute: typeof JavascriptEventLoopIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/frameworks/mobx': {
+      id: '/frameworks/mobx'
+      path: '/frameworks/mobx'
+      fullPath: '/frameworks/mobx'
+      preLoaderRoute: typeof FrameworksMobxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demos/virtual-scroll': {
@@ -82,13 +146,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemosResumableUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/javascript/event-loop/': {
+      id: '/javascript/event-loop/'
+      path: '/javascript/event-loop'
+      fullPath: '/javascript/event-loop/'
+      preLoaderRoute: typeof JavascriptEventLoopIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HomeRoute: HomeRoute,
   DemosResumableUploadRoute: DemosResumableUploadRoute,
   DemosVirtualScrollRoute: DemosVirtualScrollRoute,
+  FrameworksMobxRoute: FrameworksMobxRoute,
+  JavascriptEventLoopIndexRoute: JavascriptEventLoopIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

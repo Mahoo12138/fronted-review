@@ -1,15 +1,26 @@
 import { Link } from '@tanstack/react-router'
-import { Home, PanelLeftClose, PanelLeftOpen, ChevronRight, ImagePlus } from 'lucide-react'
+import { ChevronRight, Home, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Sun, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { menuItems, isMenuGroup } from '../../config/menuConfig'
+import { getNextTheme, useTheme, type Theme } from '../../hooks/useTheme'
 import * as styles from './sidebar.css'
+
+const themeMeta: Record<Theme, { icon: LucideIcon; label: string }> = {
+  dark: { icon: Moon, label: '深色模式' },
+  light: { icon: Sun, label: '浅色模式' },
+  system: { icon: Monitor, label: '跟随系统' },
+}
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ demos: true })
+  const { theme, toggle } = useTheme()
 
   const v = collapsed ? 'collapsed' : 'expanded'
+  const currentTheme = themeMeta[theme]
+  const nextTheme = themeMeta[getNextTheme(theme)]
+  const ThemeIcon = currentTheme.icon
 
   const toggleGroup = (id: string) => {
     setExpandedGroups((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -90,12 +101,13 @@ export default function Sidebar() {
         <div className={`${styles.footerActions}${collapsed ? ` ${styles.footerActionsCollapsed}` : ''}`}>
           <button
             type="button"
+            onClick={toggle}
             className={`${styles.actionBtn} ${styles.actionBtnLayout[v]}`}
-            aria-label="设置图片"
-            title="设置图片"
+            aria-label={`切换主题，当前${currentTheme.label}，下一个${nextTheme.label}`}
+            title={`当前：${currentTheme.label}，点击切换到${nextTheme.label}`}
           >
-            <ImagePlus size={16} />
-            {!collapsed && <span>设置图片</span>}
+            <ThemeIcon size={16} />
+            {!collapsed && <span>{currentTheme.label}</span>}
           </button>
           <button
             type="button"

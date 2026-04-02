@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { themeVars } from "@/index.css";
+import { themeVars } from "@/styles/theme.css";
 
 export const hero = style({
   textAlign: "center",

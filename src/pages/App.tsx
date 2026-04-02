@@ -1,16 +1,17 @@
 import Sidebar from "@/components/layout/Sidebar";
+import * as styles from "@/pages/app.css";
 import { themes } from "@/styles/theme.css";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { useTheme } from "@/hooks/useTheme";
 function App() {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { location } = useRouterState();
   const isLanding = location.pathname === "/";
 
   if (isLanding) {
     return (
-      <div className={themes[theme]}>
+      <div className={themes[resolvedTheme]}>
         <Outlet />
         <TanStackRouterDevtools position="bottom-right" />
       </div>
@@ -18,15 +19,13 @@ function App() {
   }
 
   return (
-    <div
-      className={`${themes[theme]} flex h-screen w-full overflow-hidden bg-background text-foreground`}
-    >
+    <div className={`${themes[resolvedTheme]} ${styles.shell}`}>
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-6 lg:h-15 md:hidden">
-          <span className="font-semibold">Frontend Demos</span>
+      <div className={styles.content}>
+        <header className={styles.header}>
+          <span className={styles.title}>Frontend Demos</span>
         </header>
-        <main className="flex-1 overflow-auto">
+        <main className={styles.main}>
           <Outlet />
         </main>
       </div>

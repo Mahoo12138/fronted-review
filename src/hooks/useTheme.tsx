@@ -1,16 +1,40 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light";
+type Theme = "dark" | "light" | "system";
+type ResolvedTheme = Exclude<Theme, "system">;
 
 const STORAGE_KEY = "theme";
 
-function getSystemTheme(): Theme {
+type LegacyMediaQueryList = MediaQueryList & {
+  addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+  removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+};
+
+function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined" || !window.matchMedia) return "light";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function getStoredTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw === "dark" || raw === "light" || raw === "system") return raw;
+  } catch (e) {
+    // ignore
+  }
+  return "system";
+}
+
+export function getNextTheme(theme: Theme): Theme {
+  if (theme === "dark") return "light";
+  if (theme === "light") return "system";
+  return "dark";
+}
+
 type ThemeContextValue = {
   theme: Theme;
+  resolvedTheme: ResolvedTheme;
   isDark: boolean;
   setTheme: (t: Theme | null) => void;
   toggle: () => void;
@@ -20,14 +44,11 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw === "dark" || raw === "light") return raw;
-    } catch (e) {
-      // ignore
-    }
-    return getSystemTheme();
+    return getStoredTheme();
   });
+  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
+
+  const resolvedTheme = theme === "system" ? systemTheme : theme;
 
   useEffect(() => {
     try {
@@ -37,51 +58,38 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     const root = document.documentElement;
     root.classList.remove("light", "dark");
-    root.classList.add(theme);
-  }, [theme]);
+    root.classList.add(resolvedTheme);
+    root.dataset.theme = resolvedTheme;
+    root.dataset.themeMode = theme;
+  }, [resolvedTheme, theme]);
 
   useEffect(() => {
-    let mq: MediaQueryList | null = null;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "dark" || saved === "light") return;
-    } catch (e) {
-      // ignore
-    }
     if (typeof window === "undefined" || !window.matchMedia) return;
-    mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setThemeState(e.matches ? "dark" : "light");
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const legacyMq = mq as LegacyMediaQueryList;
+    const updateSystemTheme = (matches: boolean) => setSystemTheme(matches ? "dark" : "light");
+    updateSystemTheme(mq.matches);
+    const handler = (e: MediaQueryListEvent) => updateSystemTheme(e.matches);
     if (typeof mq.addEventListener === "function") mq.addEventListener("change", handler);
-    else (mq as any).addListener?.(handler);
+    else legacyMq.addListener?.(handler);
     return () => {
-      if (!mq) return;
       if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", handler);
-      else (mq as any).removeListener?.(handler);
+      else legacyMq.removeListener?.(handler);
     };
   }, []);
 
   const setTheme = useCallback((t: Theme | null) => {
-    if (t === null) {
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch (e) {
-        // ignore
-      }
-      setThemeState(getSystemTheme());
-      return;
-    }
-    try {
-      localStorage.setItem(STORAGE_KEY, t);
-    } catch (e) {
-      // ignore
-    }
-    setThemeState(t);
+    setThemeState(t ?? "system");
   }, []);
 
-  const toggle = useCallback(() => setTheme(theme === "dark" ? "light" : "dark"), [theme, setTheme]);
+  const toggle = useCallback(() => {
+    setThemeState((currentTheme) => getNextTheme(currentTheme));
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark: theme === "dark", setTheme, toggle }}>
+    <ThemeContext.Provider
+      value={{ theme, resolvedTheme, isDark: resolvedTheme === "dark", setTheme, toggle }}
+    >
       {children}
     </ThemeContext.Provider>
   );
@@ -93,4 +101,4 @@ export function useTheme() {
   return ctx;
 }
 
-export type { Theme };
+export type { Theme, ResolvedTheme };

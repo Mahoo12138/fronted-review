@@ -1,4 +1,4 @@
-import { themeVars } from "@/index.css";
+import { themeVars } from "@/styles/theme.css";
 import { style } from "@vanilla-extract/css";
 
 export const section = style({
