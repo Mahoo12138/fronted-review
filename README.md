@@ -8,7 +8,7 @@
 - TypeScript
 - TanStack Router
 - shadcn/ui
-- Tailwind CSS
+- Vanilla Extract + CSS
 - Vite
 
 ## 功能演示
