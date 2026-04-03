@@ -1,31 +1,47 @@
+import { themeVars } from "@/styles/theme.css";
 import { style, styleVariants } from "@vanilla-extract/css";
 
 const calloutBase = style({
   display: "flex",
-  gap: "16px",
-  padding: "16px",
-  background: "var(--surface2)",
-  border: "1px solid var(--border)",
+  gap: "14px",
+  padding: "16px 20px",
   borderRadius: "8px",
+  margin: "16px 0",
+  fontSize: "13.5px",
+  lineHeight: 1.6,
 });
 
 export const callout = styleVariants({
   info: [
     calloutBase,
     {
-      color: "var(--callout-info)",
+      background: "rgba(92,184,255,.08)",
+      borderLeft: `3px solid ${themeVars.color.blue}`,
+      color: themeVars.color.blue,
     },
   ],
   warning: [
     calloutBase,
     {
-      color: "var(--callout-warning)",
+      background: "rgba(245,166,35,.08)",
+      borderLeft: `3px solid ${themeVars.color.yellow}`,
+      color: themeVars.color.yellow,
+    },
+  ],
+  tip: [
+    calloutBase,
+    {
+      background: "rgba(61,240,194,.08)",
+      borderLeft: `3px solid ${themeVars.color.green}`,
+      color: themeVars.color.green,
     },
   ],
   error: [
     calloutBase,
     {
-      color: "var(--callout-error)",
+      background: "rgba(220,53,69,.08)",
+      borderLeft: `3px solid ${themeVars.color.red}`,
+      color: themeVars.color.red,
     },
   ],
 });
@@ -37,5 +53,5 @@ export const calloutIcon = style({
 });
 
 export const calloutContent = style({
-  color: "var(--text)",
+  // color: themeVars.color.text,
 });

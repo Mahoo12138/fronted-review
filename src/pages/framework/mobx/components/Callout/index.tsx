@@ -1,13 +1,14 @@
-import * as styles from './callout.css';
+import * as styles from "./callout.css";
 
 interface CalloutProps {
   icon: React.ReactNode;
   children: React.ReactNode;
+  type: keyof typeof styles.callout;
 }
 
-function Callout({ icon, children }: CalloutProps) {
+function Callout({ icon, children, type }: CalloutProps) {
   return (
-    <div className={styles.callout.info}>
+    <div className={styles.callout[type]}>
       <div className={styles.calloutIcon}>{icon}</div>
       <div className={styles.calloutContent}>{children}</div>
     </div>
