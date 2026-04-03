@@ -19,10 +19,12 @@ globalStyle(`${section} h3`, {
 });
 
 globalStyle(`${section} h3::before`, {
-  content: "//  ",
+  content: "// ",
   color: themeVars.color.textDim,
   // font-family: var(--mono);
-  fontSize: "14px",
+  fontSize: "16px",
+  verticalAlign: "text-bottom",
+  paddingRight: "6px",
 });
 
 export const header = style({

@@ -1,0 +1,36 @@
+class ComputedValue {
+  constructor(derivation) {
+    this._derivation = derivation;   // 计算函数
+    this._value      = undefined;
+    this._state      = 'NOT_TRACKING';
+    this._observers  = new Set();
+    this._observeds  = new Set();    // 订阅的上游 observable
+  }
+
+  get() {
+    // 将自身注册到上层的追踪上下文
+    if (globalTrackingDerivation) {
+      this._observers.add(globalTrackingDerivation);
+    }
+    // 按需重新计算
+    if (this._state !== 'UP_TO_DATE') {
+      this._computeValue();
+    }
+    return this._value;
+  }
+
+  _computeValue() {
+    const newValue = trackDerivedFunction(this, this._derivation);
+    const changed  = !isEqual(newValue, this._value);  // 支持自定义 equals
+    this._value = newValue;
+    this._state = 'UP_TO_DATE';
+    if (changed) this._notifyObservers();  // 值真正变了才向下传播
+  }
+
+  invalidate() {
+    if (this._state === 'UP_TO_DATE') {
+      this._state = 'STALE';
+      this._observers.forEach(obs => obs.invalidate());  // 向下广播
+    }
+  }
+}

@@ -1,12 +1,7 @@
 import { themeVars } from "@/styles/theme.css";
 import { style, styleVariants } from "@vanilla-extract/css";
 
-export const title = style({
-  textAlign: "center",
-  marginBottom: "24px",
-  fontSize: "13px",
-  color: themeVars.color.textDim,
-});
+
 
 export const flows = style({
   display: "flex",

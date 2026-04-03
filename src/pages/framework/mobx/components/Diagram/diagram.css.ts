@@ -25,3 +25,10 @@ export const light = style({
 export const { dark } = styleVariants({
   dark: [light, { boxShadow: "0 2px 16px rgba(0,0,0,.05)" }],
 });
+
+export const title = style({
+  textAlign: "center",
+  marginBottom: "24px",
+  fontSize: "13px",
+  color: themeVars.color.textDim,
+});

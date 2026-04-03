@@ -54,8 +54,7 @@ function Intro() {
         MobX 的核心思想来自 <strong>TFRP（透明函数式响应式编程）</strong>
         ——你只需描述数据之间的关系，框架自动追踪依赖并最小化更新。
       </p>
-      <Diagram>
-        <div className={styles.title}>MobX 核心数据流</div>
+      <Diagram title="MobX 核心数据流">
         <div className={styles.flows}>
           {flows.map((flow, index) => (
             <>

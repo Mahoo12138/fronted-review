@@ -1,15 +1,19 @@
 import ShikiHighlighter from "react-shiki/web";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tab";
+import { useTheme } from "@/hooks/useTheme";
 import { themeVars } from "@/styles/theme.css";
 
 import Section from "../Section";
 import Code from "../Code";
 
-import makeObservableCode from "./code/makeObservable.txt?raw";
-import makeAutoObservableCode from "./code/makeAutoObservable.txt?raw";
-import observableCode from "./code/observable.txt?raw";
-import observableImplCode from "./code/observable-impl.txt?raw";
+import makeObservableCode from "../../codes/makeObservable.txt?raw";
+import makeAutoObservableCode from "../../codes/makeAutoObservable.txt?raw";
+import observableCode from "../../codes/observable.txt?raw";
+import observableImplCode from "../../codes/observable-impl.txt?raw";
+import Callout from "../Callout";
 function Observable() {
+  const { isDark } = useTheme();
+  const codeTheme = isDark ? "github-dark" : "github-light";
   return (
     <Section id="observable" title="Observable: 响应式状态" number="02">
       <p>
@@ -33,17 +37,17 @@ function Observable() {
           <TabsTrigger value="observable">observable()</TabsTrigger>
         </TabsList>
         <TabsContent value="makeObservable">
-          <ShikiHighlighter language="typescript" theme="github-light">
+          <ShikiHighlighter language="typescript" theme={codeTheme}>
             {makeObservableCode}
           </ShikiHighlighter>
         </TabsContent>
         <TabsContent value="makeAutoObservable">
-          <ShikiHighlighter language="typescript" theme="github-light">
+          <ShikiHighlighter language="typescript" theme={codeTheme}>
             {makeAutoObservableCode}
           </ShikiHighlighter>
         </TabsContent>
         <TabsContent value="observable">
-          <ShikiHighlighter language="typescript" theme="github-light">
+          <ShikiHighlighter language="typescript" theme={codeTheme}>
             {observableCode}
           </ShikiHighlighter>
         </TabsContent>
@@ -51,17 +55,18 @@ function Observable() {
 
       <h3>内部实现：Proxy + ObservableAdministration</h3>
 
-      <Code lang="typescript">{observableImplCode}</Code>
+      <Code lang="typescript" filename="observable-impl.js">
+        {observableImplCode}
+      </Code>
 
-      <div className="callout info">
-        <div className="callout-icon">💡</div>
+      <Callout type="info" icon="💡">
         <div>
           MobX 在现代版本（v6+）中使用
           <strong>ES6 Proxy</strong> 拦截属性访问，旧版（v4/v5）通过
           <strong>Object.defineProperty</strong> getter/setter 实现，Proxy
           的优势在于可追踪新增属性和数组索引访问。
         </div>
-      </div>
+      </Callout>
     </Section>
   );
 }

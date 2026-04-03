@@ -4,6 +4,7 @@ import Intro from "./components/Intro";
 
 import * as styles from "./index.css";
 import Observable from "./components/Observable";
+import Computed from "./components/Computed";
 
 const CONTENT_SELECTOR = "[data-toc-content]";
 
@@ -14,6 +15,7 @@ function MobxTutorial() {
         <Hero />
         <Intro />
         <Observable />
+        <Computed />
       </div>
       <TableOfContents containerSelector={CONTENT_SELECTOR} />
     </div>

@@ -1,11 +1,14 @@
 import ShikiHighlighter, { Language } from "react-shiki/web";
+import { useTheme } from "@/hooks/useTheme";
 import * as styles from "./code.css";
 
 interface CodeProps {
   children: string;
   lang: Language;
+  filename: string;
 }
-function Code({ children, lang }: CodeProps) {
+function Code({ children, lang, filename }: CodeProps) {
+  const { isDark } = useTheme();
   const getLangName = (lang: Language) => {
     if (typeof lang === "string") return lang;
     if (lang && "name" in lang) return lang.name;
@@ -20,13 +23,13 @@ function Code({ children, lang }: CodeProps) {
           <span className={styles.dotColor.blue}></span>
           <span className={styles.dotColor.green}></span>
         </div>
-        <div className={styles.filename}>observable-impl.js</div>
+        <div className={styles.filename}>{filename}</div>
         <div className={styles.langBadge}>{getLangName(lang)}</div>
       </div>
       <ShikiHighlighter
         language={lang}
         showLanguage={false}
-        theme="github-light"
+        theme={isDark ? "github-dark" : "github-light"}
       >
         {children}
       </ShikiHighlighter>

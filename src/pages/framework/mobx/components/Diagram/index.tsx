@@ -1,9 +1,20 @@
 import { useTheme } from "@/hooks/useTheme";
-import { dark, light } from "./diagram.css";
+import { dark, light, title as titleStyle } from "./diagram.css";
 
-function Diagram({ children }: { children: React.ReactNode }) {
+function Diagram({
+  title,
+  children,
+}: {
+  title: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const { isDark } = useTheme();
-  return <div className={isDark ? dark : light}>{children}</div>;
+  return (
+    <div className={isDark ? dark : light}>
+      {<div className={titleStyle}>{title}</div>}
+      {children}
+    </div>
+  );
 }
 
 export default Diagram;
