@@ -1,0 +1,26 @@
+let batchDepth = 0;
+const pendingReactions = [];
+
+function startBatch() {
+  batchDepth++;
+}
+
+function endBatch() {
+  if (--batchDepth === 0) {
+    // 批次结束，统一执行所有 pending reactions
+    while (pendingReactions.length) {
+      pendingReactions.shift().runReaction();
+    }
+  }
+}
+
+function action(fn) {
+  return function(...args) {
+    startBatch();
+    try {
+      return fn(...args);
+    } finally {
+      endBatch();    // 即使抛出异常也确保 batch 结束
+    }
+  };
+}

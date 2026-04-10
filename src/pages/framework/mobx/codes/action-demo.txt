@@ -1,0 +1,26 @@
+import { action, runInAction, flow } from 'mobx';
+
+// ① 装饰器 / 包裹函数
+const setUser = action('setUser', (store, user) => {
+  store.name  = user.name;   // 事务内：不触发 Reaction
+  store.age   = user.age;
+  store.email = user.email;
+  // 事务结束：批量通知一次
+});
+
+// ② runInAction：临时创建匿名 action（常用于 async 回调）
+async function fetchUser(id) {
+  const data = await api.get(id);
+  runInAction(() => {
+    store.user   = data;
+    store.loaded = true;
+  });
+}
+
+// ③ flow：generator 版本，自动处理异步的 runInAction
+const loadData = flow(function*() {
+  store.loading = true;
+  const data = yield fetch('/api/data');
+  store.data    = yield data.json();   // yield 自动 runInAction
+  store.loading = false;
+});
