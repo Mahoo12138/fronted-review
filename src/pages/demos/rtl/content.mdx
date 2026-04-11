@@ -1,0 +1,192 @@
+import { BidiIsolationLab } from "./components/BidiIsolationLab";
+import { DirectionPrimer } from "./components/DirectionPrimer";
+import { DirectionalAssetsLab } from "./components/DirectionalAssetsLab";
+import { LayoutMirrorLab } from "./components/LayoutMirrorLab";
+import { MdxCallout, MdxCode } from "./mdx-components";
+import {
+  directionalAssetsSnippet,
+  i18nDirectionSnippet,
+  logicalPropertiesSnippet,
+  rtlTypographySnippet,
+  rootDirectionSnippet,
+  tailwindRtlSnippet,
+} from "./snippets";
+
+这页不是把一堆 RTL 注意事项堆成 checklist，而是把最关键的四类问题拆成可验证的实验。你可以边读边切换方向，直接观察哪些行为是浏览器原生帮你做的，哪些必须靠你自己把 CSS 和交互语义写对。
+
+<MdxCallout type="tip">
+  RTL 的核心不是“切到阿拉伯语之后再补丁式修修样式”，而是从一开始就把 inline-start、inline-end、text-align: start
+  这些逻辑概念当成默认建模方式。
+</MdxCallout>
+
+## 一、先把方向做成状态，而不是字符串常量
+
+最基础的动作是在根节点上设置 `dir` 和 `lang`。`dir="rtl"` 会触发浏览器内建的 bidi 算法，文本、输入框、列表 marker
+ 和原生控件会先完成第一轮镜像；但这一步只覆盖“浏览器知道怎么翻”的部分，自定义布局和动画仍然是你的责任。
+
+<MdxCallout type="info">
+  <strong>bidi</strong> 是 <strong>bidirectional</strong> 的缩写。浏览器会按 Unicode
+  的双向文本规则，决定一行里 RTL 文本、LTR token、数字和标点应该怎样一起排版。它擅长处理“字符顺序”和“光标起始侧”这类原生行为，但不会帮你把
+  <code>margin-left</code>、<code>right: 0</code> 这类自定义布局代码自动改成 RTL 友好的写法。
+</MdxCallout>
+
+<DirectionPrimer />
+
+这个实验故意只放最基础的内容：标题、输入框和有序列表。它的作用不是炫技，而是让你先看清楚 `dir` 和 `lang`
+ 影响的是哪一层行为。你应该把方向切换看成应用状态的一部分，而不是散落在多个组件里的条件分支。
+
+<MdxCode code={rootDirectionSnippet} filename="document-direction.ts" lang="js" />
+
+## 二、CSS 层的关键，不是覆盖 left/right，而是换成逻辑属性
+
+如果你继续写 `margin-left`、`padding-right`、`left: 0`、`text-align: left`，那 RTL
+ 页面最后一定会长满 `[dir="rtl"]` 的补丁。更稳的做法是直接用逻辑属性，把“开始”和“结束”交给浏览器解释。
+
+所谓“逻辑属性”，本质上就是不再把布局写死为左和右，而是改写成 <code>inline-start</code> 和 <code>inline-end</code>
+  这样的方向语义。这样同一套样式在 LTR 和 RTL 下都能成立。
+
+<table>
+  <thead>
+    <tr>
+      <th>物理属性</th>
+      <th>逻辑属性</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>margin-left</code></td>
+      <td><code>margin-inline-start</code></td>
+    </tr>
+    <tr>
+      <td><code>padding-right</code></td>
+      <td><code>padding-inline-end</code></td>
+    </tr>
+    <tr>
+      <td><code>border-left</code></td>
+      <td><code>border-inline-start</code></td>
+    </tr>
+    <tr>
+      <td><code>left: 0</code></td>
+      <td><code>inset-inline-start: 0</code></td>
+    </tr>
+    <tr>
+      <td><code>text-align: left</code></td>
+      <td><code>text-align: start</code></td>
+    </tr>
+  </tbody>
+</table>
+
+
+<LayoutMirrorLab />
+
+上面的对比卡片用的是同一组 DOM，只是分别套了“物理属性版”和“逻辑属性版”两套样式。切到 RTL
+ 后你会看到三个非常典型的问题：角标停在物理右上角、强调边仍然长在左边、文字和按钮保持左对齐。这类 bug
+ 通常不是某一个组件写错，而是整套 CSS 建模方式选错了。
+
+<MdxCode code={logicalPropertiesSnippet} filename="logical-properties.css" lang="css" />
+
+## 三、方向性图标和动画，必须一起镜像
+
+方向性资源分两类：有语义方向的箭头、返回键、breadcrumb 分隔符要翻；对勾、加号、警告这类无方向语义的图标通常不翻。动画也是一样，`translateX(24px)` 不会因为页面变成 RTL 就自动换方向。
+
+<DirectionalAssetsLab />
+
+这个实验把“错的地方”收敛到两项：
+
+1. 返回与前进的箭头语义应该跟着 inline-start 和 inline-end 走，而不是永远左箭头表示返回。
+2. 进入动画如果写死为从物理右侧滑入，那么目标元素即使已经通过逻辑属性停在左边，动画轨迹也还是错的。
+
+如果你想先把这类规则沉淀成一份可复用的样板，通常可以从下面这组 CSS 开始：图标只镜像有方向语义的资产，动画则显式区分 inline-start 和 inline-end。
+
+<MdxCode code={directionalAssetsSnippet} filename="directional-assets.css" lang="css" />
+
+这里故意保留了 `[dir="rtl"]` 选择器，不是鼓励你重新回到补丁式写法，而是因为“方向性图标”和“关键帧轨迹”本来就是少数需要显式表达方向语义的资源。它们和布局层的 `margin-inline-start` 不是同一类问题。
+
+## 四、混排文本要隔离，不要赌浏览器能永远猜对
+
+RTL 场景里最容易被低估的问题不是容器布局，而是混合内容：阿拉伯语文案里夹着英文用户名、工单号、邮箱、时间、URL。浏览器 bidi
+ 会尽力排，但标点和边界一复杂，顺序就可能看起来别扭。最直接的隔离工具就是 `<bdi>`。
+
+<MdxCallout type="info">
+  <strong>bdi</strong> 可以把内部文本当成一个独立的方向小岛。外层句子仍然按 RTL 排版，但用户名、工单号、邮箱这类 LTR token
+  会先在自己的方向上下文里排好，再插回整句，所以标点和边界不容易漂移。
+</MdxCallout>
+
+<BidiIsolationLab />
+
+建议你把用户名和工单号改成不同组合试试，例如 `John_doe123`、`INV-2048`、`support/example-42`、`09:30 AM`。当这些值没有被隔离时，标点会和 LTR token 黏在一起，视觉顺序也更容易漂移。
+
+## 五、真正接入业务时，按这个顺序排查
+
+1. 根节点是否随着语言切换同步更新了 `dir` 和 `lang`。
+2. 布局、间距、边框、定位是否优先使用逻辑属性，而不是靠 `[dir="rtl"]` 局部修补。
+3. 箭头、breadcrumb、返回动作、stepper 和抽屉动画是否明确按方向语义做了镜像。
+4. 用户输入、订单号、链接、邮箱等混排 token 是否被 `<bdi>` 或 `unicode-bidi` 隔离。
+5. 第三方组件库是否单独开启了 RTL 模式，尤其是包含弹层、表格、日期组件的库。
+
+这份清单更适合你对现有页面做回归排查。再往下一层，真正容易在团队项目里漏掉的，通常是工具链、字体排版和工程接入方式。
+
+## 六、如果项目用了 Tailwind，也优先写逻辑工具类
+
+Tailwind 最容易被误用的地方，是把 `rtl:` 变体当成全局补丁工具。它确实适合给旧代码止血，但如果你从一开始就在写新组件，更推荐直接使用 `ps-*`、`pe-*`、`ms-*`、`me-*`、`text-start` 这种逻辑属性工具类。
+
+<MdxCode code={tailwindRtlSnippet} filename="tailwind-rtl.html" lang="html" />
+
+判断标准很简单：如果你发现一个组件要靠大量 `rtl:pl-0 rtl:pr-4 rtl:text-right` 才能成立，那往往说明这段 UI 还是按物理方向在建模；如果同一套类名在 LTR 和 RTL 下都能读通，说明它已经更接近逻辑方向思维了。
+
+## 七、字体与排版不是收尾问题，而是可读性的一部分
+
+RTL 适配不只是把容器翻过去。阿拉伯语、希伯来语这类语言往往需要独立字体、不同的行高策略，阿拉伯文尤其不适合再额外拉开字距。`lang` 属性在这里也不是装饰，它会影响浏览器的字形选择、读屏器发音和部分排版行为。
+
+<MdxCode code={rtlTypographySnippet} filename="rtl-typography.css" lang="css" />
+
+第 4 节讲的是混排 token 的隔离问题；这里补的是更基础的版式问题。前者解决“顺序会不会漂”，后者解决“读起来顺不顺”。这两件事必须同时成立，RTL 页面才会显得自然。
+
+## 八、工程化接入时，让 i18n 驱动方向切换
+
+方向切换最好跟语言切换走同一条链路，而不是在某个页面里单独手动设置。只要你的 i18n 状态已经是全局的，那么 `dir` 和 `lang` 也应该跟着同一个事件源更新。
+
+<MdxCode code={i18nDirectionSnippet} filename="i18n-direction.ts" lang="js" />
+
+<MdxCallout type="info">
+  很多第三方 UI 库的 RTL 不是只靠根节点 `dir="rtl"` 就能完全生效。尤其是 Drawer、Popover、DatePicker、Table 这类带弹层或复杂定位的组件，通常还需要单独打开库自己的 RTL 配置。
+</MdxCallout>
+
+## 九、上线前，再过一遍这些高频坑
+
+下面这些点不是规范全文，但很适合作为回归测试时的最后一轮检查：
+
+<table>
+  <thead>
+    <tr>
+      <th>问题</th>
+      <th>为什么容易漏</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>数字与标点</strong></td>
+      <td>阿拉伯语里的数字通常仍按 LTR 读写，浏览器会参与排版，但复杂混排场景仍然需要真机和真实文案测试。</td>
+    </tr>
+    <tr>
+      <td><strong>绝对定位</strong></td>
+      <td><code>position: absolute</code> 配合 <code>left</code> / <code>right</code> 很容易成为隐藏 bug，抽屉、角标、浮层箭头尤其常见。</td>
+    </tr>
+    <tr>
+      <td><strong>CSS 动画</strong></td>
+      <td><code>translateX</code>、slide-in、carousel 轨迹不会因为页面切成 RTL 就自动翻转，必须显式按方向处理。</td>
+    </tr>
+    <tr>
+      <td><strong>第三方组件</strong></td>
+      <td>不少组件库需要单独开启 RTL 模式，否则即便正文方向正确，弹层、日期面板和表格排序图标也可能仍按 LTR 工作。</td>
+    </tr>
+    <tr>
+      <td><strong>滚动条与手势</strong></td>
+      <td>现代浏览器大多会处理滚动条位置，但横向滚动、拖拽排序、手势滑动这类交互仍然建议手工验证一遍。</td>
+    </tr>
+  </tbody>
+</table>
+
+<MdxCallout type="warning">
+  真正决定 RTL 质量的，通常不是有没有把文字改成右对齐，而是当布局、图标、动画、混排文本、第三方组件同时出现时，整页是否还能保持一致的方向语义。这个问题只能靠真实交互和真实语言测试暴露，最好让真实母语用户过一遍关键路径，后期补丁通常会很贵。
+</MdxCallout>

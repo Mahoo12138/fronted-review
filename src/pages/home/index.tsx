@@ -47,6 +47,7 @@ const categories: Category[] = [
     desc: "高频面试手写题与实战 Demo，断点续传、虚拟滚动等实现原理与代码拆解",
     accent: "green",
     topics: [
+      { label: "RTL 适配", to: "/demos/rtl" },
       { label: "虚拟滚动", to: "/demos/virtual-scroll" },
       { label: "断点续传", to: "/demos/resumable-upload" },
       { label: "PDF 预览" },

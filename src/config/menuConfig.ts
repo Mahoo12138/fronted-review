@@ -1,4 +1,4 @@
-import { Home, List, Upload, BookOpen, Folder } from 'lucide-react'
+import { Home, List, Upload, BookOpen, Folder, Languages } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export type MenuLeaf = {
@@ -52,6 +52,7 @@ export const menuItems: MenuItem[] = [
     icon: Folder,
     children: [
       { id: 'pdf-viewer', label: 'PDF Viewer', to: '/demos/pdf-viewer', icon: BookOpen },
+      { id: 'rtl', label: 'RTL Adaptation', to: '/demos/rtl', icon: Languages },
       { id: 'virtual-scroll', label: 'Virtual Scroll', to: '/demos/virtual-scroll', icon: List },
       { id: 'resumable-upload', label: 'Resumable Upload', to: '/demos/resumable-upload', icon: Upload },
     ],
