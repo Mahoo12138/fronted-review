@@ -24,7 +24,7 @@ const Content = ({ children }: ContentProps) => {
             className={styles.root}
             options={scrollbarOptions}
         >
-            <div className={styles.body}>{children}</div>
+            <main className={styles.body} data-toc-content>{children}</main>
         </OverlayScrollbarsComponent>
     );
 };

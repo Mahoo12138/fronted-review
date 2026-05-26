@@ -1,9 +1,7 @@
-import { isValidElement } from "react";
+import { isValidElement, useEffect, useState } from "react";
 import type { ComponentProps, ComponentType, ElementType, ReactNode } from "react";
-import { AlertCircle, Info, Lightbulb } from "lucide-react";
-import ShikiHighlighter from "react-shiki/web";
+import { AlertCircle, Check, Copy, Info, Lightbulb } from "lucide-react";
 
-import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import Callout from "@/pages/framework/mobx/components/Callout";
 
@@ -22,9 +20,15 @@ type MdxRendererProps = {
   contentProps?: Record<string, unknown>;
 };
 
+type MdxPreProps = ComponentProps<"pre"> & {
+  "data-title"?: string;
+  "data-filename"?: string;
+  "data-tab"?: string;
+  "data-copy"?: string;
+};
+
 type CodeElementProps = {
   className?: string;
-  metastring?: string;
   children?: ReactNode;
 };
 
@@ -55,24 +59,6 @@ function parseLanguage(className?: string) {
   return match?.[1] ?? null;
 }
 
-function parseMeta(meta?: string) {
-  if (!meta) return null;
-  const titleMatch = meta.match(/(?:title|filename)=['"]([^'"]+)['"]/i);
-  return titleMatch?.[1] ?? null;
-}
-
-function extractCode(children: ReactNode) {
-  if (typeof children === "string") {
-    return children.replace(/\n$/, "");
-  }
-
-  if (Array.isArray(children) && children.every((child) => typeof child === "string" || typeof child === "number")) {
-    return children.join("").replace(/\n$/, "");
-  }
-
-  return null;
-}
-
 function prettifyLanguage(language: string | null) {
   if (!language) return "code";
   if (language === "tsx") return "tsx";
@@ -82,56 +68,183 @@ function prettifyLanguage(language: string | null) {
   return language;
 }
 
+function resolveCodeTitle(title?: string, filename?: string) {
+  return title ?? filename ?? "Code Example";
+}
+
+function extractTextContent(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) => extractTextContent(child)).join("");
+  }
+
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return extractTextContent(node.props.children);
+  }
+
+  return "";
+}
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.top = "0";
+  textarea.style.left = "0";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
 function MdxCodeBlock({
-  code,
+  children,
   language,
   title,
+  filename,
+  tab,
+  copy,
+  ...preProps
 }: {
-  code: string;
+  children: ReactNode;
   language: string;
-  title?: string | null;
-}) {
-  const { isDark } = useTheme();
+  title?: string;
+  filename?: string;
+  tab?: string;
+  copy?: boolean;
+} & MdxPreProps) {
+  const { className, ...restProps } = preProps;
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const isTabbedCodeBlock = Boolean(tab);
+  const codeTitle = resolveCodeTitle(title, filename);
+  const filenameLabel = filename ?? title;
+  const languageLabel = prettifyLanguage(language);
+  const copySource = extractTextContent(children).replace(/\n$/, "");
+
+  useEffect(() => {
+    if (copyState === "idle") return;
+
+    const timer = window.setTimeout(() => {
+      setCopyState("idle");
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [copyState]);
+
+  async function handleCopy() {
+    if (!copySource) return;
+
+    try {
+      await copyTextToClipboard(copySource);
+      setCopyState("copied");
+    }
+    catch {
+      setCopyState("error");
+    }
+  }
 
   return (
-    <div className={styles.codeBlockShell}>
-      <div className={styles.codeBlockHeader}>
-        <div className={styles.codeBlockMeta}>
-          <div className={styles.codeDots}>
-            <span className={styles.codeDot} style={{ background: "#ff5f56" }} />
-            <span className={styles.codeDot} style={{ background: "#ffbd2e" }} />
-            <span className={styles.codeDot} style={{ background: "#27c93f" }} />
+    <div className={cn(styles.codeBlockShell, isTabbedCodeBlock && styles.codeBlockShellTabbed)}>
+      {!isTabbedCodeBlock ? (
+        <div className={styles.codeBlockHeader}>
+          <div className={styles.codeBlockMeta}>
+            <div className={styles.codeDots}>
+              <span className={styles.codeDot} style={{ background: "#ff5f56" }} />
+              <span className={styles.codeDot} style={{ background: "#ffbd2e" }} />
+              <span className={styles.codeDot} style={{ background: "#27c93f" }} />
+            </div>
+            <div className={styles.codeTitle}>{codeTitle}</div>
           </div>
-          <div className={styles.codeTitle}>{title ?? "Code Example"}</div>
+          <div className={styles.codeBlockHeaderActions}>
+            {filename && title && filename !== title ? (
+              <span className={styles.codeMetaChip} title={filename}>
+                <span className={styles.codeMetaValue}>{filename}</span>
+              </span>
+            ) : null}
+            {copy ? (
+              <button
+                type="button"
+                className={cn(
+                  styles.codeCopyButton,
+                  copyState === "copied" && styles.codeCopyButtonCopied,
+                  copyState === "error" && styles.codeCopyButtonError,
+                )}
+                onClick={handleCopy}
+                aria-label={copyState === "copied" ? "Code copied" : "Copy code"}
+              >
+                {copyState === "copied" ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copyState === "copied" ? "Copied" : copyState === "error" ? "Retry" : "Copy"}</span>
+              </button>
+            ) : null}
+            <div className={styles.codeBadge}>{languageLabel}</div>
+          </div>
         </div>
-        <div className={styles.codeBadge}>{prettifyLanguage(language)}</div>
-      </div>
-      <div className={styles.codeBlockBody}>
-        <ShikiHighlighter
-          key={`${isDark ? "dark" : "light"}-${language}`}
-          language={language}
-          showLanguage={false}
-          theme={isDark ? "github-dark" : "github-light"}
-        >
-          {code}
-        </ShikiHighlighter>
+      ) : null}
+      <div className={cn(styles.codeBlockBody, isTabbedCodeBlock && styles.codeBlockBodyWithMeta)}>
+        {isTabbedCodeBlock ? (
+          <div className={styles.codeBlockFloatingMeta}>
+            {filenameLabel ? (
+              <span className={cn(styles.codeMetaChip, styles.codeMetaChipDocked)} title={filenameLabel}>
+                <span className={styles.codeMetaValue}>{filenameLabel}</span>
+              </span>
+            ) : null}
+            <span className={cn(styles.codeMetaChip, styles.codeMetaChipDocked)}>{languageLabel}</span>
+            {copy ? (
+              <button
+                type="button"
+                className={cn(
+                  styles.codeCopyButton,
+                  styles.codeCopyButtonDocked,
+                  copyState === "copied" && styles.codeCopyButtonCopied,
+                  copyState === "error" && styles.codeCopyButtonError,
+                )}
+                onClick={handleCopy}
+                aria-label={copyState === "copied" ? "Code copied" : "Copy code"}
+              >
+                {copyState === "copied" ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copyState === "copied" ? "Copied" : copyState === "error" ? "Retry" : "Copy"}</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <pre {...restProps} className={className}>{children}</pre>
       </div>
     </div>
   );
 }
 
-function MdxPre({ children, ...props }: ComponentProps<"pre">) {
+function MdxPre({ children, ...props }: MdxPreProps) {
   if (isValidElement<CodeElementProps>(children)) {
     const language = parseLanguage(children.props.className);
-    const code = extractCode(children.props.children);
+    const title = props["data-title"];
+    const filename = props["data-filename"];
+    const tab = props["data-tab"];
+    const copy = props["data-copy"] === "true";
 
-    if (language && typeof code === "string") {
+    if (language) {
       return (
         <MdxCodeBlock
-          code={code}
+          {...props}
+          copy={copy}
+          filename={filename}
           language={language}
-          title={parseMeta(children.props.metastring)}
-        />
+          tab={tab}
+          title={title}
+        >
+          {children}
+        </MdxCodeBlock>
       );
     }
   }

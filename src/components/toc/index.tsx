@@ -1,17 +1,17 @@
 import { useTableOfContents } from "@/hooks/useTableOfContents";
 import * as styles from "./toc.css";
 
-interface TableOfContentsProps {
+interface TocProps {
   /** 内容区域的 CSS 选择器 */
   containerSelector: string;
   /** 要收集的标题选择器，默认 "h2, h3" */
   headingSelector?: string;
 }
 
-export function TableOfContents({
+export function Toc({
   containerSelector,
   headingSelector,
-}: TableOfContentsProps) {
+}: TocProps) {
   const { items, activeId } = useTableOfContents(
     containerSelector,
     headingSelector
@@ -48,4 +48,4 @@ export function TableOfContents({
   );
 }
 
-export default TableOfContents;
+export default Toc;

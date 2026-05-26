@@ -31,7 +31,7 @@ export default function Sidebar() {
       <div className={`${styles.header} ${styles.headerPadding[v]}`}>
         <Link to="/home" className={`${styles.logo} ${styles.logoLayout[v]}`}>
           <Home size={24} />
-          {!collapsed && <span className={styles.logoText}>Frontend Demos</span>}
+          {!collapsed && <span className={styles.logoText}>H先生的秘密花园</span>}
         </Link>
       </div>
 

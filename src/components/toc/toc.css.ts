@@ -2,14 +2,20 @@ import { themeVars } from "@/styles/theme.css";
 import { style, styleVariants } from "@vanilla-extract/css";
 
 export const tocAside = style({
+  display: "none",
   position: "sticky",
   top: "40px",
   maxHeight: "calc(100vh - 80px)",
   overflowY: "auto",
-  width: "220px",
+  width: "320px",
   flexShrink: 0,
   paddingLeft: "24px",
   borderLeft: `1px solid ${themeVars.color.border}`,
+  "@media": {
+    "(min-width: 1080px)": {
+      display: "block",
+    },
+  },
 });
 
 export const tocTitle = style({

@@ -262,6 +262,10 @@ export const codeBlockShell = style({
   boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
 });
 
+export const codeBlockShellTabbed = style({
+  borderRadius: 0,
+});
+
 export const codeBlockHeader = style({
   display: "flex",
   alignItems: "center",
@@ -270,6 +274,15 @@ export const codeBlockHeader = style({
   padding: "12px 16px",
   borderBottom: `1px solid ${themeVars.color.border}`,
   background: themeVars.color.surface2,
+});
+
+export const codeBlockHeaderActions = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: "8px",
+  flexWrap: "wrap",
+  minWidth: 0,
 });
 
 export const codeBlockMeta = style({
@@ -315,7 +328,124 @@ export const codeBadge = style({
 });
 
 export const codeBlockBody = style({
+  position: "relative",
   overflowX: "auto",
+});
+
+export const codeBlockBodyWithMeta = style({
+  overflow: "hidden",
+});
+
+export const codeBlockFloatingMeta = style({
+  position: "absolute",
+  right: 0,
+  bottom: 0,
+  zIndex: 2,
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "flex-end",
+  gap: 0,
+  flexWrap: "wrap",
+  maxWidth: "100%",
+  pointerEvents: "auto",
+});
+
+export const codeMetaChip = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  minHeight: "30px",
+  padding: "0 10px",
+  borderRadius: "999px",
+  border: `1px solid ${themeVars.color.border}`,
+  background: themeVars.color.surface,
+  color: themeVars.color.text2,
+  fontFamily: monoFont,
+  fontSize: "11px",
+  lineHeight: 1,
+  backdropFilter: "blur(10px)",
+  boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)",
+});
+
+export const codeMetaChipDocked = style({
+  minHeight: "28px",
+  padding: "0 10px",
+  borderBottom: 0,
+  borderRadius: 0,
+  boxShadow: "none",
+});
+
+export const codeMetaLabel = style({
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: themeVars.color.textDim,
+});
+
+export const codeMetaValue = style({
+  minWidth: 0,
+  maxWidth: "20ch",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+export const codeCopyButton = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  minHeight: "30px",
+  padding: "0 10px",
+  borderRadius: "999px",
+  border: `1px solid ${themeVars.color.border}`,
+  background: themeVars.color.surface,
+  color: themeVars.color.text2,
+  fontFamily: monoFont,
+  fontSize: "11px",
+  fontWeight: 600,
+  lineHeight: 1,
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)",
+  transition: "transform 140ms ease, background-color 140ms ease, color 140ms ease, border-color 140ms ease",
+  selectors: {
+    '&:hover': {
+      transform: "translateY(-1px)",
+      background: themeVars.color.surface2,
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${accentColor}`,
+      outlineOffset: "2px",
+    },
+  },
+});
+
+export const codeCopyButtonDocked = style({
+  minHeight: "28px",
+  padding: "0 10px",
+  borderBottom: 0,
+  borderRadius: 0,
+  boxShadow: "none",
+  selectors: {
+    '&:hover': {
+      transform: "none",
+    },
+  },
+});
+
+export const codeCopyButtonCopied = style({
+  borderColor: "rgba(0, 184, 148, 0.28)",
+  background: "rgba(0, 184, 148, 0.12)",
+  color: themeVars.color.green,
+});
+
+export const codeCopyButtonError = style({
+  borderColor: "rgba(232, 57, 74, 0.28)",
+  background: "rgba(232, 57, 74, 0.12)",
+  color: themeVars.color.red,
+});
+
+globalStyle(`${codeMetaChip} svg, ${codeCopyButton} svg`, {
+  flexShrink: 0,
 });
 
 export const fallbackPre = style({
@@ -354,6 +484,30 @@ globalStyle(`${codeBlockBody} .shiki code`, {
   display: "grid",
   minWidth: "100%",
   fontFamily: monoFont,
+});
+
+globalStyle(`${codeBlockBodyWithMeta} .shiki`, {
+  paddingBottom: "16px",
+});
+
+globalStyle(`${codeBlockFloatingMeta} > *`, {
+  margin: 0,
+});
+
+globalStyle(`${codeBlockFloatingMeta} > *:first-child`, {
+  borderTopLeftRadius: "10px",
+});
+
+globalStyle(`${codeBlockFloatingMeta} > *:not(:first-child)`, {
+  borderLeft: 0,
+});
+
+globalStyle(`${codeBlockHeaderActions} ${codeMetaChip}`, {
+  boxShadow: "none",
+});
+
+globalStyle(`${codeBlockHeaderActions} ${codeCopyButton}`, {
+  boxShadow: "none",
 });
 
 globalStyle(`${codeBlockBody} .shiki span`, {
