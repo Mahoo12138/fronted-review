@@ -23,6 +23,21 @@ export const [light, themeVars] = createTheme({
     orchid: "#c83df5",
     turquoise: "#00b894",
     orange: "#e67e22",
+
+    ink: "#1a1208",
+    paper: "#faf6ef",
+    amber: "#c8832a",
+    amberLight: "#f0c06a",
+    amberPale: "#fdf0d5",
+
+    rust: "#a8401a",
+    sage: "#4a6741",
+    navy: "#1e4a7a",
+
+    grid: "#e8dfc8",
+    sepia: "#7a6e5e", // muted
+    khaki: "#d4c8a8", // border
+
     grad: "rgba(0, 136, 168, 0.07)",
   },
   space: {
@@ -36,7 +51,6 @@ export const dark = createTheme(themeVars, {
 
     text: "#d8ddf5",
     text2: "#fff",
-
 
     textDim: "#6b7498",
     textBright: "#f0f3ff",
@@ -55,6 +69,19 @@ export const dark = createTheme(themeVars, {
     orchid: "#e86cfa",
     turquoise: "#3df0c2",
     orange: "#f5a623",
+
+    ink: "#f5ead7",
+    paper: "#17120d",
+    amber: "#d89a44",
+    amberLight: "#f0c06a",
+    amberPale: "#3a2b16",
+
+    rust: "#d26a47",
+    sage: "#88a67d",
+    navy: "#6e9fd4",
+    khaki: "#403528", // border
+    grid: "#2a2218",
+    sepia: "#a89781", // muted
 
     grad: "rgba(0, 194, 212, 0.08)",
   },

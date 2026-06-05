@@ -5,7 +5,7 @@ import { ThemeProvider } from "./hooks/useTheme";
 import { routeTree } from "./routeTree.gen";
 import "./styles/reset.css";
 import "./styles/app.css";
-import "./styles/shiki.css";
+// import "./styles/shiki.css";
 
 const router = createRouter({ routeTree });
 
